@@ -1,5 +1,5 @@
 /**
- * Shared shape of a "System Design in 21 Days" lesson. Both languages of a day
+ * Shared shape of a "System Design Essentials" lesson. Both languages of a day
  * must keep the same questions and choices in the same order: saved answers are
  * choice indexes, so switching language keeps a learner's progress.
  */
@@ -39,6 +39,8 @@ export interface BuildTask {
   given: string;
   /** Slot ids per row, top to bottom. */
   rows: string[][];
+  /** A heading for each row, when the rows are phases (e.g. "Before the sale"). Without one a row shows only its number. */
+  rowLabels?: string[];
   slots: Record<string, { role: string; answer: string }>;
   /** Boxes in the tray; `does` is shown as the hint after a wrong drop. A chip no slot answers is a decoy. */
   chips: { id: string; label: string; does: string }[];

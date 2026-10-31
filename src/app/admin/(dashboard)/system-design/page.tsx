@@ -6,12 +6,13 @@ import { StatTile } from "@/components/admin/StatTile";
 import { BarList } from "@/components/charts/BarList";
 import { rangeDays, RANGES } from "@/lib/admin/analytics";
 import { requireAdmin } from "@/lib/admin/auth";
+import { lessonDay } from "@/lib/course-app";
 import { getSdAnalytics, getSdLearner } from "@/lib/admin/system-design";
 import { trailLines, type Tone } from "@/lib/admin/sd-event-words";
 import { Chip, DayView, Panel, PlainWords, pct } from "@/components/admin/SystemDesignViews";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const dayName = (lesson: string | null) => (lesson === "0-0" ? "Day 0" : lesson === "1-0" ? "Day 1" : lesson ?? "");
+const dayName = (lesson: string | null) => (lesson && /^\d+-\d+$/.test(lesson) ? lessonDay(lesson) : lesson ?? "");
 
 const TONE: Record<Tone, string> = { learn: "bg-sky-500", win: "bg-emerald-500", miss: "bg-red-500", nav: "bg-line", setting: "bg-amber-500" };
 

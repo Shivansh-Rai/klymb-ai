@@ -1,5 +1,8 @@
 import "server-only";
+import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
 import { HIDE_MONEY } from "@/lib/site-status";
+
+const SD_LIVE = `${BUILT_LESSONS.length} of the ${MODULES.reduce((n, m) => n + m.lessons.length, 0)} lessons are out today`;
 
 /**
  * Transactional email through Brevo's HTTP API.
@@ -124,7 +127,7 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
     `Amount paid: ${p.amount}`, `Payment ID: ${p.paymentId}`, "",
     "What happens next",
     `1. Open ${p.siteUrl}/learn/system-design and sign in with the Google account you paid with.`,
-    "2. This is early access: 6 of the 22 lessons are out today, and the rest are added as they are ready, at no extra cost.",
+    `2. This is early access: ${SD_LIVE}, and the rest are added as they are ready, at no extra cost.`,
     `3. Finish the whole course and we refund 100% of your fee. The conditions: ${p.siteUrl}/refund-policy`, "",
     `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai",
   ].join("\n");
@@ -138,7 +141,7 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.line}">${row("Amount paid", p.amount)}${row("Payment ID", p.paymentId)}</table>${button(`${site}/learn/system-design`, "Open the course")}`,
       `${sectionTitle("What happens next")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${step(1, "Sign in with the same Google account", "The account you paid with is the one that holds your seat.")}
-        ${step(2, "This is early access", "6 of the 22 lessons are out today. The rest are added as they are ready, at no extra cost.")}
+        ${step(2, "This is early access", `${SD_LIVE[0].toUpperCase()}${SD_LIVE.slice(1)}. The rest are added as they are ready, at no extra cost.`)}
         ${step(3, "Finish the course, get 100% back", `Pass every lesson's check and the final assessment. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
       </table>`,
     ],

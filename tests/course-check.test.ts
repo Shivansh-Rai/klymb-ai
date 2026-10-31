@@ -42,7 +42,7 @@ test("a pass saves Prove it, keeps the best score, and opens the streak pop-up o
   assert.equal(s.lessons["0-0"].check, 80);
   assert.equal(s.lessons["0-0"].failed, false);
   assert.equal(s.streakPop, true);
-  s = submitCheck({ ...s, streakPop: false }, "1-0", LESSON_DAYS["1-0"].copy.en.post, [0, 0, 0, 0, 0], NOW + 60_000);
+  s = submitCheck({ ...s, streakPop: false }, "0-1", LESSON_DAYS["0-1"].copy.en.post, [0, 0, 0, 0, 0], NOW + 60_000);
   assert.equal(s.streakPop, false, "already shown today");
   const tomorrow = submitCheck(s, "0-0", qs, picks(0), NOW + 86_400_000);
   assert.equal(tomorrow.streakPop, true);
@@ -58,13 +58,13 @@ test("a miss asks for a rewatch before the retake, and doesn't open the next les
   assert.equal(p.rewatched, false);
   assert.equal(p.check, 40);
   assert.equal(s.streakPop, false);
-  assert.equal(isLocked(s, "1-0"), true);
+  assert.equal(isLocked(s, "0-1"), true);
   s = markRewatched(s, "0-0");
   assert.equal(s.lessons["0-0"].rewatched, true);
   s = submitCheck(s, "0-0", qs, picks(2), NOW);
   assert.equal(s.lessons["0-0"].failed, false);
   assert.ok(s.lessons["0-0"].post);
-  assert.equal(isLocked(s, "1-0"), false);
+  assert.equal(isLocked(s, "0-1"), false);
 });
 
 test("rewatching only counts after a miss", () => {
@@ -75,10 +75,10 @@ test("rewatching only counts after a miss", () => {
 test("a locked lesson won't open from the course list, but a shared link still does", () => {
   const s = home();
   assert.equal(isLocked(s, "0-0"), false, "the first lesson is always open");
-  const blocked = openLesson(s, "1-0", NOW);
+  const blocked = openLesson(s, "0-1", NOW);
   assert.equal(blocked.screen, "home");
   assert.match(blocked.toast ?? "", /unlock/);
-  assert.equal(deepLink(s, "1-0", NOW).screen, "player");
+  assert.equal(deepLink(s, "0-1", NOW).screen, "player");
 });
 
 test("the lesson isn't finished until the check is passed", () => {
@@ -109,7 +109,7 @@ test("the commitment is signed, dated and kept", () => {
 test("every design-review screen builds", () => {
   for (const st of START_SCREENS) assert.ok(previewState(st, {}, NOW).screen, st);
   assert.equal(previewState("commit", {}, NOW).commitment, null);
-  assert.equal(previewState("lessonfail", {}, NOW).lessons["1-0"].failed, true);
+  assert.equal(previewState("lessonfail", {}, NOW).lessons["0-1"].failed, true);
 });
 
 test("after a miss, only real playback opens the retake: skipping to the end does not", () => {
@@ -149,9 +149,9 @@ test("a seek is still not playback, at any speed", () => {
 });
 
 test("learners already in a lesson keep it when the checks arrive", () => {
-  const s: CourseState = { ...home(), cur: "1-0", lessons: { "1-0": { watched: true } } };
-  assert.equal(isLocked(s, "1-0"), false);
-  assert.equal(isLocked({ ...home(), cur: "0-0" }, "1-0"), true);
+  const s: CourseState = { ...home(), cur: "0-1", lessons: { "0-1": { watched: true } } };
+  assert.equal(isLocked(s, "0-1"), false);
+  assert.equal(isLocked({ ...home(), cur: "0-0" }, "0-1"), true);
 });
 
 test("coming back from Google on the welcome shows the commitment before Day 0", () => {

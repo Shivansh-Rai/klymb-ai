@@ -50,5 +50,5 @@ export function lessonReview(lesson: string): Record<Lang, Question[]> {
   return { en: en.post, hi: hi.post };
 }
 
-/** A video belongs to Day 0 or the overview, or else to a paid lesson. */
-export const isFreeVideo = (file: string) => /^(overview|day-0)[.-]/.test(file);
+/** Only the course overview is free; every lesson video is in the paid course. */
+export const isFreeVideo = (file: string) => /^overview[.-]/.test(file);

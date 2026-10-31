@@ -48,7 +48,7 @@ function describe(e: TrailEvent): Omit<TrailLine, "at" | "lesson"> {
       : { text: "Pressed play", detail: p.at ? `from ${secs(p.at)}` : undefined, tone: "learn" };
     case "video_progress": return { text: e.lesson === "overview" ? `Watched ${p.pct}% of the trailer` : `Watched ${p.pct}% of the video`, tone: "learn" };
     case "signin": return { text: "Signed in with Google", tone: "win" };
-    case "welcome": return { text: p.choice === "commit" ? "Committed to the 21 days (held the button)" : "Chose to jump straight into Day 0", tone: "win" };
+    case "welcome": return { text: p.choice === "commit" ? "Committed to the 21 days (held the button)" : "Chose to jump straight into Day 1", tone: "win" };
     case "tour": return p.action === "finished"
       ? { text: "Finished the quick tour of the lesson screen", tone: "nav" }
       : { text: `Skipped the tour at tip ${p.at}`, tone: "nav" };

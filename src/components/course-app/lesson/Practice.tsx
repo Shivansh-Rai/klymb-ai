@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 import type { Day, DayCopy } from "@/data/system-design/types";
-import { ALL_IDS, ASSESSMENT_TOTAL, assessmentStep, completeNext, isPaywalled, isSoon, lessonSteps, pad, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
+import { ALL_IDS, assessmentParts, assessmentStep, completeNext, isPaywalled, isSoon, lessonSteps, pad, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { stagger } from "../ui";
 import type { Act } from "../useCourseApp";
@@ -71,20 +71,21 @@ export function inRange(items: { answer: number; tolerance: number }[], mine: nu
  */
 function AssessmentHeader({ s, id, ui }: { s: CourseState; id: string; ui: Ui }) {
   const n = assessmentStep(s, id);
+  const total = assessmentParts(id, s.lang).total;
   return (
     <div className="flex flex-col gap-2.5 border-b border-sd-divider pb-3.5">
       <div className="flex items-end justify-between gap-3">
         <span className="pb-1 text-[11px] font-extrabold tracking-[0.12em] uppercase text-sd-accent-700">{s.stage === "done" ? ui.dayComplete : ui.assessment}</span>
         {n > 0 && (
-          <span aria-label={`Question ${n} of ${ASSESSMENT_TOTAL}`} className="flex items-baseline gap-[3px] font-extrabold tracking-[-0.03em]">
+          <span aria-label={`Question ${n} of ${total}`} className="flex items-baseline gap-[3px] font-extrabold tracking-[-0.03em]">
             <span className="text-[34px] leading-none">{n}</span>
-            <span className="text-[15px] text-sd-n-600">/ {ASSESSMENT_TOTAL}</span>
+            <span className="text-[15px] text-sd-n-600">/ {total}</span>
           </span>
         )}
       </div>
       {n > 0 && (
         <div className="h-1 overflow-hidden rounded-full bg-sd-n-300">
-          <div className="h-full rounded-full bg-sd-accent transition-[width] duration-400" style={{ width: `${(n / ASSESSMENT_TOTAL) * 100}%` }} />
+          <div className="h-full rounded-full bg-sd-accent transition-[width] duration-400" style={{ width: `${(n / total) * 100}%` }} />
         </div>
       )}
     </div>

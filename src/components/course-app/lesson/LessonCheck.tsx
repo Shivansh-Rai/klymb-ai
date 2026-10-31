@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 import type { Lang, Question } from "@/data/system-design/types";
-import { ASSESSMENT_TOTAL, PASS_MARK, checkPct, pad, passed, submitCheck, updateLesson, type CourseState, type LessonProgress } from "@/lib/course-app";
+import { PASS_MARK, assessmentParts, checkPct, pad, passed, submitCheck, updateLesson, type CourseState, type LessonProgress } from "@/lib/course-app";
 import { shuffledOrder } from "@/lib/shuffle";
 import { Icon } from "../icons";
 import { stagger, useCountUp } from "../ui";
@@ -14,7 +14,7 @@ const PASS = Math.round(PASS_MARK * 100);
 const UI = {
   en: {
     title: "Check what you learned",
-    count: `${ASSESSMENT_TOTAL} questions`, time: "About 15 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
+    count: (n: number) => `${n} questions`, time: "About 15 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${n} of ${t} correct`,
     passed: "Passed", passedBody: (next: boolean) => (next ? `Next lesson unlocked. Pass mark is ${PASS}%.` : `Pass mark is ${PASS}%.`),
     failed: "Not passed yet", failedBody: `You need ${PASS}% to unlock the next lesson. Rewatch the lesson, then retake the assessment.`,
@@ -25,7 +25,7 @@ const UI = {
   },
   hi: {
     title: "Dekho kitna samjha",
-    count: `${ASSESSMENT_TOTAL} sawaal`, time: "Lagbhag 15 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
+    count: (n: number) => `${n} sawaal`, time: "Lagbhag 15 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${t} mein se ${n} sahi`,
     passed: "Pass", passedBody: (next: boolean) => (next ? `Agla lesson khul gaya. Pass mark ${PASS}% hai.` : `Pass mark ${PASS}% hai.`),
     failed: "Abhi pass nahi", failedBody: `Agla lesson kholne ke liye ${PASS}% chahiye. Lesson dobara dekho, phir assessment do.`,
@@ -232,7 +232,7 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
     <div className="flex flex-col gap-3.5 rounded-xl bg-sd-surface p-[18px]">
       <h3 className="m-0 text-[28px] leading-none tracking-[-0.035em] text-balance lg:text-[38px]">{ui.title}</h3>
       <div className="flex flex-wrap gap-2">
-        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count}</span>
+        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count(assessmentParts(id, s.lang).total)}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.time}</span>
         <span className="sd-tag sd-tag-accent rounded-md">{ui.mark}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.answersEnd}</span>

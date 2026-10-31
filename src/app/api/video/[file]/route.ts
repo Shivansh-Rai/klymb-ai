@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 const FILE = /^[a-z0-9-]+\.mp4$/;
 
 /**
- * Plays a System Design video: redirects to a fresh signed R2 link. Day 0 and
- * the overview are open to everyone; every other lesson needs a seat. Without
+ * Plays a System Design video: redirects to a fresh signed R2 link. The
+ * overview is open to everyone; every lesson needs a seat. Without
  * R2 keys (local dev) the free videos fall back to their copies in public/,
  * which hold no paid lesson.
  */

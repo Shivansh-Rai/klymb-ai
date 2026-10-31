@@ -4,7 +4,7 @@
  * native speaker check them before relying on them.
  */
 export const SUBTITLES_EN: Record<string, [number, string][]> = {
-  "0-0": [
+  "legacy-0-0": [
     [0, "You tap Order on Swiggy, and in one second your food is confirmed."],
     [4, "But in that one second, your order passes through six different systems."],
     [9, "Choosing those systems and connecting them: that is what system design means."],
@@ -54,7 +54,7 @@ export const SUBTITLES_EN: Record<string, [number, string][]> = {
     [238, "The parts: load balancer, servers, cache, database, queue, CDN. That’s it, you’re ready."],
     [243, "Now on to Day 1: Flipkart’s Big Billion Day crash."],
   ],
-  "1-0": [
+  "legacy-1-0": [
     [0, "6 October 2014. Flipkart’s first Big Billion Day."],
     [5, "At midnight, lakhs of people hit the site at the same time."],
     [8, "The site slowed down. Errors on the pages. Deals sold out in seconds."],
@@ -101,7 +101,7 @@ export const SUBTITLES_EN: Record<string, [number, string][]> = {
     [182, "Now it’s your turn. A new scenario: IRCTC Tatkal."],
     [186, "Go to the Prove it section below and show you’ve got it."],
   ],
-  "1-1": [
+  "legacy-1-1": [
     [0, "31 December 2021. New Year’s Eve on Swiggy."],
     [3, "At one point: 9,500 food orders every minute."],
     [6, "And every order hits the servers again and again: menu, cart, payment, tracking."],
@@ -148,7 +148,7 @@ export const SUBTITLES_EN: Record<string, [number, string][]> = {
     [192, "Your turn now. Exam results day, and one server’s disk is full."],
     [197, "Go to the Prove it section below, and show that you’ve got it."],
   ],
-  "1-2": [
+  "legacy-1-2": [
     [0, "12 May 2019. IPL final, Mumbai vs Chennai, down to the last ball."],
     [6, "On Hotstar, 1.86 crore people were watching at the same moment."],
     [11, "And 91% of them on a phone."],
@@ -188,7 +188,7 @@ export const SUBTITLES_EN: Record<string, [number, string][]> = {
     [181, "Your turn now. A score card, every 5 seconds, 1 crore phones."],
     [186, "Go to the Prove it section below, and show that you’ve got it."],
   ],
-  "1-3": [
+  "legacy-1-3": [
     [0, "Two taps on your phone, one second apart."],
     [4, "A heart on a photo. And ₹500 sent from your wallet."],
     [8, "Lose the like? Nobody notices. Lose the ₹500? A complaint."],
@@ -227,7 +227,7 @@ export const SUBTITLES_EN: Record<string, [number, string][]> = {
     [155, "Your turn now. A refund: money back into the wallet, and a ledger entry."],
     [159, "Go to the Prove it section below, and show that you’ve got it."],
   ],
-  "1-4": [
+  "legacy-1-4": [
     [0, "June 2019. Myntra’s End of Reason Sale."],
     [4, "At the peak, over 7,100 orders every minute. Traffic 3× a normal day."],
     [9, "And behind every order, dozens of searches: brand, size, under ₹999."],

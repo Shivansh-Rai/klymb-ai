@@ -1,7 +1,8 @@
 /**
  * Content for the System Design course app (/learn/system-design).
  *
- * The course is "System Design in 21 Days": a Day 0 start, then three weeks.
+ * The course is "System Design Essentials": 21 days in three parts,
+ * foundations, interview practice, and an introduction to AI system design.
  * This file reaches every browser, so it holds the outline only: the lessons
  * themselves are in lessons.ts, on the server, and are handed to the app by
  * src/lib/sd-lessons.ts according to what the viewer may open. Lessons not in
@@ -17,52 +18,51 @@ export interface CourseModule {
 }
 
 export const MODULES: CourseModule[] = [
-  { title: "Start here", flow: ["Phone", "Servers", "Database"], lessons: [["Raju ka dhaba: what system design is", "4:08"]] },
   {
-    title: "Week 1 · Handling scale",
-    flow: ["Users", "Load balancer", "Servers"],
+    title: "Foundations · a shopping app",
+    flow: ["Client", "Server", "Database"],
     lessons: [
-      ["Flipkart Big Billion Day: predictable vs sudden load", "3:10"],
-      ["Swiggy dinner rush: load balancing", "3:20"],
-      ["Hotstar IPL final: video, storage and CDN", "3:11"],
-      ["Wallet vs likes: SQL vs NoSQL", "2:42"],
-      ["Myntra sale: indexing and read replicas", "2:39"],
-      ["CSK 10 lakh views: sharding and hot keys", "0:00"],
-      ["OTP login: rate limiting and auth", "0:00"],
+      ["What is system design? The last pair of shoes", "6:19"],
+      ["How an app works: from a tap to a saved cart", "6:49"],
+      ["Why applications slow down", "0:00"],
+      ["Load balancing", "0:00"],
+      ["Database foundations", "0:00"],
+      ["Caching and content delivery", "0:00"],
+      ["Replication and sharding", "0:00"],
+      ["Queues and background work", "0:00"],
     ],
   },
   {
-    title: "Week 2 · Real-time and reliability",
-    flow: ["Event", "Queue", "Worker"],
+    title: "Interview practice · worked designs",
+    flow: ["Clarify", "Design", "Trade-offs"],
     lessons: [
-      ["Zepto orders: microservices and queues", "0:00"],
-      ["Cricbuzz wicket: notification fan-out", "0:00"],
-      ["WhatsApp ticks: real-time connections", "0:00"],
-      ["Uber nearby drivers: geo systems", "0:00"],
-      ["BookMyShow seats: locking and concurrency", "0:00"],
-      ["UPI double tap: idempotency", "0:00"],
-      ["Mock round: design a URL shortener", "0:00"],
+      ["The interview framework", "0:00"],
+      ["Reliability and overload", "0:00"],
+      ["Design a notification service", "0:00"],
+      ["Design a social news feed", "0:00"],
+      ["Design a ticket-booking system", "0:00"],
+      ["Design a chat application", "0:00"],
+      ["Design a video streaming system", "0:00"],
+      ["Mock interview and revision", "0:00"],
     ],
   },
   {
-    title: "Week 3 · Advanced and AI-era",
-    flow: ["Query", "Retrieve", "LLM"],
+    title: "Introduction to AI system design",
+    flow: ["Question", "Retrieve", "Model"],
     lessons: [
-      ["Instagram celebrity post: feeds and ranking", "0:00"],
-      ["Flipkart search: autocomplete", "0:00"],
-      ["Wallet vs likes: consistency and CAP", "0:00"],
-      ["Netflix outage: failures and circuit breakers", "0:00"],
-      ["AI support bot: RAG", "0:00"],
-      ["ChatGPT-style app: LLM serving", "0:00"],
-      ["Capstone: design Zepto end to end", "0:00"],
+      ["Design a basic AI assistant", "0:00"],
+      ["RAG: answering from documents", "0:00"],
+      ["AI serving: tokens, latency and cost", "0:00"],
+      ["AI quality and safety", "0:00"],
+      ["Capstone: a document-based AI assistant", "0:00"],
     ],
   },
 ];
 
 /** The lessons that exist, by lesson id ("module-lesson", zero-based). Every other lesson is coming soon. */
-export const BUILT_LESSONS = ["0-0", "1-0", "1-1", "1-2", "1-3", "1-4"];
-/** Open to everyone. Every other built lesson needs a seat. */
-export const FREE_LESSONS = ["0-0"];
+export const BUILT_LESSONS = ["0-0", "0-1"];
+/** Open to everyone. None: the course overview video is the free part, and every lesson needs a seat. */
+export const FREE_LESSONS: string[] = [];
 
 export type Question =
   | { type: "mcq" | "timed"; typeLabel: string; topic: string; prompt: string; options: string[]; ans: number }
@@ -95,11 +95,11 @@ export interface QuickCheck { q: string; opts: string[]; ans: number; why: strin
 
 /** The lesson recommended for each assessment topic the learner missed. Lesson ids are "module-lesson", zero-based. */
 export const REVIEW_LESSON: Record<string, string> = {
-  Scaling: "1-4",
-  "Load balancing": "1-1",
-  Availability: "1-3",
-  "Request flow": "0-0",
-  "Trade-offs": "1-3",
+  Scaling: "0-2",
+  "Load balancing": "0-3",
+  Availability: "0-6",
+  "Request flow": "0-1",
+  "Trade-offs": "0-0",
   Estimation: "1-0",
 };
 
@@ -122,16 +122,16 @@ export const NOTIFICATIONS: Notif[] = [
   { id: 1, type: "reply", title: "Klymb team replied", body: "“If I have auto-scaling, why pre-scale at all?”", time: "12 min ago", group: "Today", unread: true, go: "player" },
   { id: 2, type: "streak", title: "Your 6-day streak is waiting", body: "One lesson step keeps it.", time: "2 h ago", group: "Today", unread: true, go: "progress" },
   { id: 3, type: "badge", title: "Badge earned: First pass", body: "First lesson check passed.", time: "Yesterday", group: "Earlier", unread: false, go: "progress" },
-  { id: 4, type: "module", title: "Day 5 is out", body: "Myntra sale: indexing and read replicas · 15 min", time: "2 days ago", group: "Earlier", unread: false, go: "course" },
-  { id: 5, type: "assess", title: "Your retake is open", body: "Day 0 rewatched. Try again.", time: "4 days ago", group: "Earlier", unread: false, go: "player" },
+  { id: 4, type: "module", title: "Day 3 is out", body: "Why applications slow down · 15 min", time: "2 days ago", group: "Earlier", unread: false, go: "course" },
+  { id: 5, type: "assess", title: "Your retake is open", body: "Day 1 rewatched. Try again.", time: "4 days ago", group: "Earlier", unread: false, go: "player" },
 ];
 
-/** The welcome screen: what the course gives you, before Day 0. [title, detail] */
+/** The welcome screen: what the course gives you, before Day 1. [title, detail] */
 export const WELCOME: [string, string][] = [
-  ["21 days, one real Indian app each day", "Flipkart, Swiggy, IRCTC, UPI, Hotstar and more: what broke, and how they fixed it."],
-  ["A 3-minute Hinglish story video", "With subtitles you can switch on or off."],
-  ["You answer first, then learn", "Make your call, then see what really happened and the idea behind it."],
-  ["Practice that feels like the interview", "Estimates, drag-and-drop designs and full design problems."],
-  ["Interviewer follow-ups", "What they ask next, and a 2-minute answer you can say out loud."],
-  ["A cheatsheet every day, at your own pace", "15 minutes a day, on your phone: metro, cab or canteen."],
+  ["21 days, from the basics", "Start with what a client, server and database do. No system design experience needed."],
+  ["A 6–8 minute Hinglish video a day", "One shopping app that grows as you learn, with the captions on screen."],
+  ["You think first, then learn", "Pause, answer in your own words, then compare with a model answer."],
+  ["Practice that feels like the interview", "Drag-and-drop designs, scenario questions and full design problems."],
+  ["Interviewer follow-ups", "What they commonly ask next, and an answer you can say out loud."],
+  ["An introduction to AI system design", "The last five days: AI assistants, RAG, cost, latency and safety."],
 ];

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 /** The course on sale. It stands alone while HIDE_MONEY keeps the 30-day tracks' fees off the site. */
 function SystemDesignRefund({ n }: { n: string }) {
   return (
-    <Section n={n} title="System Design" plain="Finish all 22 lessons, pass every check, take the final assessment: your fee comes back in full.">
+    <Section n={n} title="System Design" plain="Finish all 21 lessons, pass every check, take the final assessment: your fee comes back in full.">
       <p>{sdRefund.headline}</p>
       <p>{sdRefund.earlyAccess}</p>
       <p>All of the following must be true:</p>

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Day 0 is the free lesson; Day 1 onwards is in the full course. */
+/** Every lesson is in the full course: this old link goes to the offer. */
 export default function SystemDesignDayOne() {
   redirect("/system-design");
 }

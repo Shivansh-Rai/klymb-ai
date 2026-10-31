@@ -4,6 +4,7 @@
  * without a database.
  */
 import type { Day, Question } from "@/data/system-design/types";
+import { lessonDay } from "@/lib/course-app";
 
 export interface SdEventRow {
   created_at: string;
@@ -141,7 +142,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     return {
       anon, email: emailOf.get(anon) ?? null, first: mine[0].created_at, last: last.created_at,
       events: mine.length, stepsDone: steps.size, done: done.filter(Boolean) as string[],
-      where: lastStep ? `${lastStep.lesson === "0-0" ? "Day 0" : lastStep.lesson === "1-0" ? "Day 1" : lastStep.lesson} · ${STEP_LABEL[lastStep.step ?? ""] ?? lastStep.step}` : "Browsing",
+      where: lastStep ? `${lastStep.lesson && /^\d+-\d+$/.test(lastStep.lesson) ? lessonDay(lastStep.lesson) : lastStep.lesson} · ${STEP_LABEL[lastStep.step ?? ""] ?? lastStep.step}` : "Browsing",
       device: last.device, lang: last.lang,
       minutes: Math.round((mine.filter((e) => e.event === "ping").length * PING_SECONDS) / 60),
     };
@@ -160,7 +161,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     lang: count([...lastPerAnon.values()], (e) => (e.lang === "hi" ? "Hinglish" : e.lang === "en" ? "English" : null)),
     device: count([...lastPerAnon.values()], (e) => (e.device === "phone" ? "Phone" : e.device === "desktop" ? "Desktop" : null)),
     screens: count(events.filter((e) => e.event === "screen"), (e) => String(e.props?.screen ?? "")),
-    welcome: count(events.filter((e) => e.event === "welcome"), (e) => (e.props?.choice === "day0" ? "Started Day 0" : "Took the baseline first")),
+    welcome: count(events.filter((e) => e.event === "welcome"), (e) => (e.props?.choice === "day0" ? "Started Day 1" : "Took the baseline first")),
     tour: count(events.filter((e) => e.event === "tour"), (e) => (e.props?.action === "finished" ? "Finished the tour" : `Skipped at stop ${e.props?.at}`)),
     subsOff: new Set(events.filter((e) => e.event === "subs" && e.props?.on === false).map((e) => e.anon_id)).size,
     shares: events.filter((e) => e.event === "share").length,

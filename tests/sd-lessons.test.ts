@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { BUILT_LESSONS, FREE_LESSONS } from "../src/data/system-design/course-app";
 import { LESSON_DAYS } from "../src/data/system-design/lessons";
 import {
-  afterPayment, completeNext, deepLink, defaultState, dayOf, hasQuickCheck, isPaywalled, isSoon, openLesson, setLessons, startEnrolled, subtitleLines, updateLesson, type CourseState,
+  afterPayment, deepLink, defaultState, dayOf, hasQuickCheck, isPaywalled, isSoon, openLesson, setLessons, startEnrolled, subtitleLines, type CourseState,
 } from "../src/lib/course-app";
 import { gradeLesson, isBuiltLesson, isFreeLesson, isFreeVideo, lessonContent, lessonReview, redact } from "../src/lib/sd-lessons";
 
@@ -14,16 +14,16 @@ const home = (over: Partial<CourseState> = {}): CourseState => ({ ...defaultStat
 
 test("the outline the browser sees lists exactly the lessons that exist", () => {
   assert.deepEqual([...BUILT_LESSONS].sort(), Object.keys(LESSON_DAYS).sort());
-  assert.deepEqual(FREE_LESSONS, ["0-0"], "only Day 0 is free");
-  assert.equal(isFreeLesson("0-0"), true);
-  assert.equal(isFreeLesson("1-0"), false);
-  assert.equal(isBuiltLesson("1-4"), true);
+  assert.deepEqual(FREE_LESSONS, [], "no lesson is free: the overview video is the free part");
+  assert.equal(isFreeLesson("0-0"), false);
+  assert.equal(isFreeLesson("0-1"), false);
+  assert.equal(isBuiltLesson("0-1"), true);
   assert.equal(isBuiltLesson("3-0"), false);
   assert.equal(isBuiltLesson(7), false);
 });
 
-test("without a seat only Day 0 is sent; with one, every built lesson", () => {
-  assert.deepEqual(Object.keys(lessonContent(false)), ["0-0"]);
+test("without a seat no lesson is sent; with one, every built lesson", () => {
+  assert.deepEqual(Object.keys(lessonContent(false)), []);
   assert.deepEqual(Object.keys(lessonContent(true)).sort(), [...BUILT_LESSONS].sort());
 });
 
@@ -46,8 +46,8 @@ test("no answer leaves the server inside a lesson", () => {
 });
 
 test("redaction keeps what the questions need to show", () => {
-  const before = LESSON_DAYS["1-0"].copy.en.post[0];
-  const after = redact(LESSON_DAYS["1-0"]).copy.en.post[0];
+  const before = LESSON_DAYS["0-1"].copy.en.post[0];
+  const after = redact(LESSON_DAYS["0-1"]).copy.en.post[0];
   assert.equal(after.prompt, before.prompt);
   assert.deepEqual(after.choices.map((c) => c.text), before.choices.map((c) => c.text));
 });
@@ -63,10 +63,11 @@ test("the server grades in both languages alike", () => {
   }
 });
 
-test("Day 0 and the overview play for anyone; every other video needs a seat", () => {
-  assert.equal(isFreeVideo("day-0.mp4"), true);
-  assert.equal(isFreeVideo("day-0-wide.mp4"), true);
+test("only the overview plays for anyone; every lesson video needs a seat", () => {
   assert.equal(isFreeVideo("overview.mp4"), true);
+  assert.equal(isFreeVideo("overview-21day.mp4"), true);
+  assert.equal(isFreeVideo("day-0.mp4"), false);
+  assert.equal(isFreeVideo("essentials-day-1.mp4"), false);
   assert.equal(isFreeVideo("day-1.mp4"), false);
   assert.equal(isFreeVideo("day-1-wide.mp4"), false);
   assert.equal(isFreeVideo("day-05.mp4"), false);
@@ -92,7 +93,7 @@ function importsOf(file: string) {
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
 test("nothing the browser loads can reach a paid lesson", () => {
-  const forbidden = /(data\/system-design\/(lessons|subtitles-en|day-\d)|lib\/sd-lessons)\.ts$/;
+  const forbidden = /(data\/system-design\/(lessons|subtitles-en|day-\d|essentials-day-\d)|lib\/sd-lessons)\.ts$/;
   const roots = [...walk("src/components/course-app"), ...walk("src/components/system-design-offer"), "src/lib/course-app.ts"].filter((f) => /\.tsx?$/.test(f));
   const seen = new Set(roots);
   const queue = [...roots];
@@ -106,48 +107,43 @@ test("nothing the browser loads can reach a paid lesson", () => {
 
 test("without a seat a lesson that exists shows the offer, not a lesson", () => {
   setLessons(lessonContent(false));
-  assert.equal(isPaywalled("0-0"), false);
-  assert.equal(isPaywalled("1-0"), true);
-  assert.equal(isSoon("1-0"), false, "it is out, not coming soon");
+  assert.equal(isPaywalled("0-0"), true, "Day 1 is paid too");
+  assert.equal(isPaywalled("0-1"), true);
+  assert.equal(isSoon("0-1"), false, "it is out, not coming soon");
   assert.equal(isPaywalled("3-0"), false, "a lesson that doesn't exist yet stays coming soon");
-  assert.equal(dayOf("1-0"), undefined);
-  assert.deepEqual(subtitleLines("1-0", "en"), [], "its subtitles stay on the server too");
-  assert.equal(hasQuickCheck("1-0"), false, "and so does its quick check");
+  assert.equal(dayOf("0-1"), undefined);
+  assert.deepEqual(subtitleLines("0-1", "en"), [], "its subtitles stay on the server too");
+  assert.equal(hasQuickCheck("0-1"), false, "and so does its quick check");
 
-  const asked = openLesson(home(), "1-0", NOW);
+  const asked = openLesson(home(), "0-1", NOW);
   assert.equal(asked.paywall, true);
   assert.equal(asked.screen, "home");
 
-  const forced = openLesson(home(), "1-0", NOW, true);
+  const forced = openLesson(home(), "0-1", NOW, true);
   assert.equal(forced.paywall, true, "a shared link doesn't get past it");
-
-  const free = openLesson(home(), "0-0", NOW);
-  assert.equal(free.screen, "player");
-  assert.equal(free.paywall, false);
 });
 
 test("a link to a paid lesson lands on the course with the offer open", () => {
   setLessons(lessonContent(false));
-  const s = deepLink({ ...defaultState(NOW) }, "1-2", NOW);
+  const s = deepLink({ ...defaultState(NOW) }, "0-1", NOW);
   assert.equal(s.paywall, true);
   assert.equal(s.screen, "course");
   assert.equal(s.onboarded, true);
 });
 
-test("finishing the last free lesson of a module leads to the recap, then the offer", () => {
+test("starting the course without a seat opens the offer, not a lesson", () => {
   setLessons(lessonContent(false));
-  const steps = { watched: true, post: [0], est: [1], built: 0, design: "x", follow: [true] };
-  const s = completeNext(updateLesson(home({ cur: "0-0" }), "0-0", steps, NOW), false, NOW);
-  assert.equal(s.screen, "recap");
-  assert.equal(openLesson(s, s.cur, NOW).paywall, true);
+  const s = openLesson(home({ cur: "0-0" }), "0-0", NOW);
+  assert.equal(s.paywall, true);
+  assert.equal(s.screen, "home");
 });
 
 test("a seat holder skips the welcome: promises first, once", () => {
   setLessons(lessonContent(true));
-  assert.equal(isPaywalled("1-0"), false);
-  assert.ok(dayOf("1-0"));
-  assert.ok(subtitleLines("1-0", "en").length > 0);
-  assert.equal(hasQuickCheck("1-0"), true);
+  assert.equal(isPaywalled("0-1"), false);
+  assert.ok(dayOf("0-1"));
+  assert.deepEqual(subtitleLines("0-1", "en"), [], "its captions are burned into the video");
+  assert.equal(hasQuickCheck("0-1"), false);
 
   const fresh = startEnrolled(defaultState(NOW));
   assert.equal(fresh.screen, "commit");

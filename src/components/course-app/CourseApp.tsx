@@ -64,7 +64,7 @@ function Sidebar({ s, act }: { s: CourseState; act: Act }) {
       <div className="px-6"><Image src="/brand/klymb-logo.svg" alt="Klymb.ai" width={117} height={18} className="h-[18px] w-auto" priority /></div>
       <div className="px-6">
         <div className="text-[11px] font-semibold tracking-[0.1em] text-sd-accent-700 uppercase">Course</div>
-        <div className="text-[17px] font-extrabold">System Design in 21 Days</div>
+        <div className="text-[17px] font-extrabold">System Design Essentials</div>
       </div>
       <nav aria-label="Course" className="flex flex-col border-t-2 border-sd-divider">
         {TABS.map(([k, label, icon]) => {

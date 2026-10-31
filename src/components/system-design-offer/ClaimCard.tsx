@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { offerSignIn, offerSwitchAccount } from "@/app/(course)/system-design/actions";
+import { BUILT_LESSONS } from "@/data/system-design/course-app";
+import { LESSON_COUNT } from "@/lib/course-app";
 import { formatINR } from "@/lib/format";
 import { loadCheckout, type RazorpaySuccess } from "@/lib/razorpay-checkout";
 import { claimProblems, countdownParts, linkedInProblem, type SdOfferState, type SdRole } from "@/lib/sd-offer";
@@ -260,8 +262,8 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
             <span>Complete the course end to end and get 100% of your money back. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
           </p>
           <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
-            <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">6/22</span>
-            <span>Early access: 6 of the 22 lessons are live today. The rest are added as they&apos;re ready, at no extra cost.</span>
+            <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">{BUILT_LESSONS.length}/{LESSON_COUNT}</span>
+            <span>Early access: {BUILT_LESSONS.length} of the {LESSON_COUNT} lessons are live today. The rest are added as they&apos;re ready, at no extra cost.</span>
           </p>
           {email ? (
             <form action={offerSwitchAccount} className="text-xs leading-[1.4] text-[#605d5d]">

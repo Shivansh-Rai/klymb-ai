@@ -5,7 +5,7 @@ import { lessonContent } from "../src/lib/sd-lessons";
 import { SUBTITLES_EN } from "../src/data/system-design/subtitles-en";
 import {
   SPEED_MAX, SPEED_MIN, audioTrack, audioTracks, defaultState, fromStored, lineAt, setSpeed, speedLabel, stepSpeed, subtitleLangs,
-  setLessons, subtitleLines, toStored, type CourseState,
+  setLessons, toStored, type CourseState,
 } from "../src/lib/course-app";
 
 // The app gets its lessons from the server; these tests take the full set, as a seat holder does.
@@ -48,9 +48,9 @@ test("English subtitles line up with the Hinglish captions, line for line", () =
 });
 
 test("subtitle languages per lesson, and the line at a moment", () => {
-  assert.deepEqual(subtitleLangs("0-0").map(([l]) => l), ["hinglish", "en"]);
-  assert.deepEqual(subtitleLangs("7-2"), []);
-  const en = subtitleLines("1-0", "en");
+  assert.deepEqual(subtitleLangs("0-0"), [], "the Essentials videos have their captions burned in");
+  assert.deepEqual(subtitleLangs("2-2"), []);
+  const en = SUBTITLES_EN["legacy-0-0"];
   assert.equal(lineAt(en, 0), en[0][1]);
   assert.equal(lineAt(en, 5), en[1][1]);
   assert.equal(lineAt([[3, "late"]], 1), "");
@@ -59,7 +59,7 @@ test("subtitle languages per lesson, and the line at a moment", () => {
 test("an audio language a lesson lacks falls back to the original voice-over", () => {
   const tracks = audioTracks("0-0");
   assert.equal(tracks[0].lang, "Hinglish");
-  assert.ok(tracks[0].wide, "the original carries the 16:9 cut");
+  assert.equal(tracks.length, 1, "one voice-over");
   assert.equal(audioTrack({ ...base(), audio: "English" }, "0-0").lang, "Hinglish");
 });
 

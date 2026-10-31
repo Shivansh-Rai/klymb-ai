@@ -3,9 +3,10 @@ import Link from "next/link";
 import { entity } from "@/data/legal";
 import type { SdOfferState, SdRole } from "@/lib/sd-offer";
 import { ClaimCard } from "./ClaimCard";
+import { IntroVideo } from "./IntroVideo";
 import { OfferBackdrop } from "./OfferBackdrop";
 
-const STATS = [["21", "days"], ["15 min", "a day"], ["6", "Indian outages"]];
+const STATS = [["21", "days"], ["15 min", "a day"], ["5", "days of AI design"]];
 
 /** The System Design offer: the promise on the left, the price and the claim form on the right. */
 export function OfferView({ offer, email, name, phone, linkedin, role, campaign, resume, signInFailed, inApp }: {
@@ -34,12 +35,13 @@ export function OfferView({ offer, email, name, phone, linkedin, role, campaign,
               </div>
             ))}
           </dl>
+          <IntroVideo />
         </div>
 
         <div className="sd-offer-right flex flex-col gap-4">
           <ClaimCard offer={offer} email={email} name={name} phone={phone} linkedin={linkedin} role={role} campaign={campaign} resume={resume} signInFailed={signInFailed} inApp={inApp} />
           <div className="flex flex-col gap-1.5 text-[13px] leading-[1.4] text-[#b9ad9f]">
-            <Link href="/learn/system-design?lesson=0-0" className="font-bold text-[#f3d48a] underline underline-offset-4">Not sure yet? Try Day 0 free</Link>
+            <a href="#course-intro" className="font-bold text-[#f3d48a] underline underline-offset-4">Not sure yet? Watch the 2-minute course intro, free</a>
             <p className="m-0 text-xs">
               Sold by {entity.registeredName} ·{" "}
               <Link href="/terms" className="underline underline-offset-2">Terms</Link> ·{" "}

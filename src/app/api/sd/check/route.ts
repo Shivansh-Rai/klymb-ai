@@ -11,8 +11,8 @@ const picksOf = (v: unknown) => (Array.isArray(v) && v.length <= 20 && v.every((
 /**
  * Grades a lesson check. The lesson reaches the browser without its answers,
  * so this is the only place a score can come from. A signed-in attempt is
- * recorded, which is the proof "100% back on finishing" stands on; Day 0 can
- * also be tried signed out, and then nothing is kept.
+ * recorded, which is the proof "100% back on finishing" stands on. An attempt
+ * signed out is graded but nothing is kept.
  */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { lesson?: unknown; picks?: unknown } | null;

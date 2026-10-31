@@ -1,3 +1,7 @@
+import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+
+const LESSON_TOTAL = MODULES.reduce((n, m) => n + m.lessons.length, 0);
+
 /**
  * ─────────────────────────────────────────────────────────────
  *  ENTITY, GRIEVANCE AND POLICY DETAILS
@@ -92,10 +96,10 @@ export const refund = {
  */
 export const sdRefund = {
   headline: "Complete System Design end to end and we refund 100% of your fee.",
-  earlyAccess: "System Design is sold in early access. 6 of its 22 lessons are live today. The rest are released as they are ready and are included in what you paid.",
+  earlyAccess: `System Design is sold in early access. ${BUILT_LESSONS.length} of its ${LESSON_TOTAL} lessons are live today. The rest are released as they are ready and are included in what you paid.`,
   /** confirm: is every one of these required? */
   conditions: [
-    "All 22 lessons finished, from Day 0 to Day 21",
+    `All ${LESSON_TOTAL} lessons finished, from Day 1 to Day ${LESSON_TOTAL}`,
     "The lesson check passed on every lesson, signed in with the Google account you paid with",
     "The final assessment taken",
   ],

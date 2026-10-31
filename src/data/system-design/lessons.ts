@@ -4,31 +4,25 @@
  * import this file, or subtitles-en.ts: tests/sd-lessons.test.ts holds that
  * line. The course app gets what its viewer may open from src/lib/sd-lessons.ts.
  */
-import { dayZero } from "./day-0";
-import { dayOne } from "./day-1";
-import { dayTwo } from "./day-2";
-import { dayThree } from "./day-3";
-import { dayFour } from "./day-4";
-import { dayFive } from "./day-5";
+import { essentialsDayOne } from "./essentials-day-1";
+import { essentialsDayTwo } from "./essentials-day-2";
 import type { QuickCheck } from "./course-app";
 import type { Day } from "./types";
 
 /** Every built lesson in full, by lesson id ("module-lesson", zero-based). */
-export const LESSON_DAYS: Record<string, Day> = { "0-0": dayZero, "1-0": dayOne, "1-1": dayTwo, "1-2": dayThree, "1-3": dayFour, "1-4": dayFive };
+export const LESSON_DAYS: Record<string, Day> = { "0-0": essentialsDayOne, "0-1": essentialsDayTwo };
 
 /** Ungraded in-video questions, by lesson id. None of the lessons has one yet. */
-export const QUICK_CHECKS: Record<string, QuickCheck> = {
-  "1-0": {
-    q: "Midnight traffic is forecast at 8× normal. What kind of load is this?",
-    opts: ["Sudden: it arrives in seconds", "Predictable: you know the date and time", "Neither: it depends on the servers"],
-    ans: 1,
-    why: "You know when it comes, so you can prepare: pre-scale and test above the forecast before midnight.",
-  },
-};
+export const QUICK_CHECKS: Record<string, QuickCheck> = {};
 
-/** Written transcripts, [seconds, line]: the lesson video's own captions. */
+/**
+ * Written transcripts, [seconds, line]: the lesson video's own captions, drawn
+ * over the clean cut. The Essentials videos have their captions burned in, so
+ * they have none here. The entries below belong to the earlier lessons
+ * (day-0.ts to day-5.ts), kept under their old ids for when they return.
+ */
 export const TRANSCRIPTS: Record<string, [number, string][]> = {
-  "0-0": [
+  "legacy-0-0": [
     [0, "Swiggy pe Order dabaya, aur ek second mein khana confirm."],
     [4, "Par us ek second mein tumhara order chhe alag systems se guzarta hai."],
     [9, "In systems ko chunna aur jodna, isi ko kehte hain system design."],
@@ -78,7 +72,7 @@ export const TRANSCRIPTS: Record<string, [number, string][]> = {
     [238, "Parts: load balancer, servers, cache, database, queue, CDN. Bas, tum ready ho."],
     [243, "Ab Day 1 mein chalo: Flipkart ka Big Billion Day crash."],
   ],
-  "1-0": [
+  "legacy-1-0": [
     [0, "6 October 2014. Flipkart ka pehla Big Billion Day."],
     [5, "Midnight hote hi lakhon log ek saath site par aaye."],
     [8, "Site slow hui. Pages par errors. Deals seconds mein sold out."],
@@ -125,7 +119,7 @@ export const TRANSCRIPTS: Record<string, [number, string][]> = {
     [182, "Ab tumhari baari. Naya scenario: IRCTC Tatkal."],
     [186, "Neeche Prove it section mein jao, aur dikhao ki samajh aaya."],
   ],
-  "1-1": [
+  "legacy-1-1": [
     [0, "31 December 2021. Swiggy pe New Year's Eve."],
     [3, "Ek point pe, har minute 9,500 food orders."],
     [6, "Aur har order servers ko baar baar hit karta hai: menu, cart, payment, tracking."],
@@ -172,7 +166,7 @@ export const TRANSCRIPTS: Record<string, [number, string][]> = {
     [192, "Ab tumhari baari. Exam results ka din, ek server ki disk full."],
     [197, "Neeche Prove it section mein jao, aur dikhao ki samajh aaya."],
   ],
-  "1-2": [
+  "legacy-1-2": [
     [0, "12 May 2019. IPL final, Mumbai vs Chennai, aakhri ball tak."],
     [6, "Hotstar pe, ek hi pal mein 1.86 crore log dekh rahe the."],
     [11, "Aur unmein se 91% phone pe."],
@@ -212,7 +206,7 @@ export const TRANSCRIPTS: Record<string, [number, string][]> = {
     [181, "Ab tumhari baari. Score card, har 5 second, 1 crore phones."],
     [186, "Neeche Prove it section mein jao, aur dikhao ki samajh aaya."],
   ],
-  "1-3": [
+  "legacy-1-3": [
     [0, "Tumhare phone pe do baar tap, ek second ke farak pe."],
     [4, "Ek photo pe heart. Aur wallet se ₹500 bheje."],
     [8, "Like kho gaya? Kisi ko pata nahi. ₹500 kho gaye? Complaint."],
@@ -251,7 +245,7 @@ export const TRANSCRIPTS: Record<string, [number, string][]> = {
     [155, "Ab tumhari baari. Refund: wallet mein paise wapas, aur ledger entry."],
     [159, "Neeche Prove it section mein jao, aur dikhao ki samajh aaya."],
   ],
-  "1-4": [
+  "legacy-1-4": [
     [0, "June 2019. Myntra ki End of Reason Sale."],
     [4, "Peak pe, har minute 7,100 se zyada orders. Traffic, normal din ka 3 guna."],
     [9, "Aur har order ke peeche darjanon searches: brand, size, ₹999 se kam."],
