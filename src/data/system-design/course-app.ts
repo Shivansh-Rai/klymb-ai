@@ -43,7 +43,7 @@ export const MODULES: CourseModule[] = [
       ["Design a ticket-booking system", "0:00"],
       ["Design a chat application", "0:00"],
       ["Design a video streaming system", "0:00"],
-      ["Mock interview and revision", "0:00"],
+      ["Revision: design a whole system from scratch", "0:00"],
     ],
   },
   {
