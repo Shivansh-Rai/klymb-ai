@@ -42,13 +42,14 @@ export const STAGES: { key: string; label: string; hit: (e: SdEventRow) => boole
   { key: "post", label: "Prove it", hit: (e) => e.event === "step_done" && e.step === "post" },
   { key: "est", label: "Estimate", hit: (e) => e.event === "step_done" && e.step === "est" },
   { key: "built", label: "Build it", hit: (e) => e.event === "step_done" && e.step === "built" },
+  { key: "drawn", label: "Draw it", hit: (e) => e.event === "step_done" && e.step === "drawn" },
   { key: "design", label: "Design it", hit: (e) => e.event === "step_done" && e.step === "design" },
   { key: "follow", label: "Follow-ups", hit: (e) => e.event === "step_done" && e.step === "follow" },
   { key: "complete", label: "Completed the day", hit: (e) => e.event === "day_complete" },
 ];
 
 const STEP_LABEL: Record<string, string> = {
-  call: "Your call", watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done",
+  call: "Your call", watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done",
 };
 
 const count = <T,>(xs: T[], key: (x: T) => string | null | undefined) => {
@@ -76,6 +77,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     const funnel = STAGES
       .filter((st) => st.key !== "est" || day.copy.en.estimates?.length)
       .filter((st) => st.key !== "built" || day.copy.en.build)
+      .filter((st) => st.key !== "drawn" || day.copy.en.canvas)
       .filter((st) => st.key !== "design" || day.copy.en.design)
       .filter((st) => st.key !== "follow" || day.copy.en.followUps?.length)
       .map((st) => ({ label: st.label, value: new Set(evs.filter(st.hit).map((e) => e.anon_id)).size }));

@@ -15,7 +15,7 @@ setLessons(lessonContent(true));
 const NOW = new Date(2026, 9, 21, 9, 0, 0).getTime();
 const home = (): CourseState => ({ ...defaultState(NOW), screen: "home", onboarded: true });
 /** Day 1 with every practice step done. */
-const day0Done = (s: CourseState) => updateLesson(s, "0-0", { watched: true, built: 0, post: [0, 0, 0, 0, 0], follow: [true, true, false] }, NOW);
+const day0Done = (s: CourseState) => updateLesson(s, "0-0", { watched: true, built: 0, drawn: { score: 2, of: 2 }, post: [0, 0, 0, 0, 0], follow: [true, true, false] }, NOW);
 
 test("fmt shows m:ss and never goes negative", () => {
   assert.equal(fmt(0), "0:00");
@@ -141,6 +141,7 @@ function fullProgress(id: string) {
     watched: true, post: c.post.map(() => 0),
     ...(c.estimates?.length ? { est: c.estimates.map((e) => e.answer) } : {}),
     ...(c.build ? { built: 0 } : {}),
+    ...(c.canvas ? { drawn: { score: 1, of: 1 } } : {}),
     ...(c.design ? { design: "A full attempt at the design problem." } : {}),
     ...(c.followUps?.length ? { follow: c.followUps.map(() => true) } : {}),
   };
@@ -247,7 +248,7 @@ test("a first visit starts on the splash screen", () => {
 });
 
 test("a day with estimates and a design attempt isn't finished until both are done", () => {
-  const base = { pre: [0, 0, 0], watched: true, post: [0, 0, 0, 0], built: 1, follow: [true, true, true, true] };
+  const base = { pre: [0, 0, 0], watched: true, post: [0, 0, 0, 0], built: 1, drawn: { score: 3, of: 3 }, follow: [true, true, true, true] };
   const noEst = updateLesson(home(), "0-1", base, NOW);
   assert.equal(flowDone(noEst, "0-1"), false, "estimates still to do");
   const noDesign = updateLesson(home(), "0-1", { ...base, est: [267, 30000, 267] }, NOW);

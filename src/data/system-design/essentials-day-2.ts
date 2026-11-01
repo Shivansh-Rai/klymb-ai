@@ -155,6 +155,24 @@ const en: DayCopy = {
     ],
     done: "That’s the write path: request → checks → save → response. Confirm the save before showing it.",
   },
+  canvas: {
+    title: "Draw the product page and cart from scratch",
+    brief: "Draw what happens when a shopper opens product 123 (details and its image) and taps Add to Cart. Point each arrow from the part that asks to the part that answers.",
+    parts: ["client", "server", "database", "storage", "cache", "queue", "lb"],
+    model: {
+      nodes: [
+        { id: "c", part: "client", x: 0.16, y: 0.35 }, { id: "s", part: "server", x: 0.5, y: 0.35 },
+        { id: "d", part: "database", x: 0.84, y: 0.35 }, { id: "i", part: "storage", x: 0.5, y: 0.8 },
+      ],
+      edges: [["c", "s"], ["s", "d"], ["c", "i"]],
+    },
+    why: {
+      "client>server": "Every GET and POST goes from the client to the app server through the API.",
+      "server>database": "The server reads the product and writes the cart item in the database, after its checks.",
+      "client>storage": "The image is a separate request: the client fetches it from where images are served, using the image URL in the product response.",
+    },
+    done: "One page, two paths: details and cart through the server and database, and the picture straight from the image store. That’s why they can arrive at different times.",
+  },
 
   design: {
     title: "Design a basic shopping cart",
@@ -391,6 +409,24 @@ const hi: DayCopy = {
       { id: "show", label: "Pehle updated cart dikhao", does: "save confirm hone se pehle dikhana result fake karna hoga" },
     ],
     done: "Yeh hai write path: request → checks → save → response. Dikhane se pehle save confirm karo.",
+  },
+  canvas: {
+    title: "Product page aur cart scratch se draw karo",
+    brief: "Draw karo jab shopper product 123 kholta hai (details aur image) aur Add to Cart dabata hai. Har arrow us part se do jo poochta hai, us part tak jo jawab deta hai.",
+    parts: ["client", "server", "database", "storage", "cache", "queue", "lb"],
+    model: {
+      nodes: [
+        { id: "c", part: "client", x: 0.16, y: 0.35 }, { id: "s", part: "server", x: 0.5, y: 0.35 },
+        { id: "d", part: "database", x: 0.84, y: 0.35 }, { id: "i", part: "storage", x: 0.5, y: 0.8 },
+      ],
+      edges: [["c", "s"], ["s", "d"], ["c", "i"]],
+    },
+    why: {
+      "client>server": "Har GET aur POST client se API ke through app server tak jaata hai.",
+      "server>database": "Server checks ke baad database mein product padhta hai aur cart item likhta hai.",
+      "client>storage": "Image alag request hai: client product response ke image URL se use image-serving jagah se laata hai.",
+    },
+    done: "Ek page, do raaste: details aur cart server aur database se, aur picture seedha image store se. Isliye dono alag times par aa sakte hain.",
   },
 
   design: {

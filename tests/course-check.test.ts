@@ -82,7 +82,7 @@ test("a locked lesson won't open from the course list, but a shared link still d
 });
 
 test("the lesson isn't finished until the check is passed", () => {
-  const steps = { pre: [0, 0, 0], watched: true, est: [1200, 12, 700], built: 0, follow: [true, true, true, true] };
+  const steps = { pre: [0, 0, 0], watched: true, est: [1200, 12, 700], built: 0, drawn: { score: 2, of: 2 }, follow: [true, true, true, true] };
   const failed = submitCheck(updateLesson(home(), "0-0", steps, NOW), "0-0", qs, picks(3), NOW);
   assert.equal(flowDone(failed, "0-0"), false);
   assert.equal(flowDone(submitCheck(failed, "0-0", qs, picks(0), NOW), "0-0"), true);

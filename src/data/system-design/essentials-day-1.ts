@@ -153,6 +153,20 @@ const en: DayCopy = {
     ],
     done: "That’s the request path: client → server → database, and the response back the same way.",
   },
+  canvas: {
+    title: "Draw the shop from scratch",
+    brief: "A shopper taps Buy on the last pair of shoes. Draw the parts that make this work, and point an arrow from each part to the one it asks.",
+    parts: ["client", "server", "database", "cache", "queue"],
+    model: {
+      nodes: [{ id: "c", part: "client", x: 0.16, y: 0.5 }, { id: "s", part: "server", x: 0.5, y: 0.5 }, { id: "d", part: "database", x: 0.84, y: 0.5 }],
+      edges: [["c", "s"], ["s", "d"]],
+    },
+    why: {
+      "client>server": "The phone never touches the database directly. It sends the request to the app server, which applies the rules.",
+      "server>database": "The server asks the database to claim one unit only if stock is still available. That one conditional step is what stops the double sale.",
+    },
+    done: "Client asks the server, the server asks the database, and the response comes back the same way. Every design in this course starts from these three boxes.",
+  },
 
   followUps: [
     {
@@ -365,6 +379,20 @@ const hi: DayCopy = {
       { id: "screen", label: "Order confirmed message", does: "client ka dikhaya result, system ka part nahi" },
     ],
     done: "Yeh hai request ka raasta: client → server → database, aur response usi raaste wapas.",
+  },
+  canvas: {
+    title: "Shop ko scratch se draw karo",
+    brief: "Shopper last pair of shoes par Buy dabata hai. Jo parts isko chalate hain unhe draw karo, aur har part se us part tak arrow do jisse woh poochta hai.",
+    parts: ["client", "server", "database", "cache", "queue"],
+    model: {
+      nodes: [{ id: "c", part: "client", x: 0.16, y: 0.5 }, { id: "s", part: "server", x: 0.5, y: 0.5 }, { id: "d", part: "database", x: 0.84, y: 0.5 }],
+      edges: [["c", "s"], ["s", "d"]],
+    },
+    why: {
+      "client>server": "Phone kabhi seedha database tak nahi jaata. Woh request app server ko bhejta hai, jo rules lagata hai.",
+      "server>database": "Server database se kehta hai: ek unit tabhi claim karo jab stock abhi bhi available ho. Yahi ek conditional step double sale rokta hai.",
+    },
+    done: "Client server se poochta hai, server database se, aur response usi raaste wapas aata hai. Is course ka har design inhi teen boxes se shuru hota hai.",
   },
 
   followUps: [

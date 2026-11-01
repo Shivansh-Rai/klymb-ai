@@ -60,13 +60,14 @@ function stepProps(s: CourseState, id: string, key: keyof LessonProgress, p: Les
   }
   if (key === "est") return { vals: join(p.est ?? []), inRange: inRange(c.estimates ?? [], p.est ?? []), of: c.estimates?.length ?? 0 };
   if (key === "built") return { wrong: p.built ?? 0 };
+  if (key === "drawn") return { score: p.drawn?.score ?? 0, of: p.drawn?.of ?? 0, boxes: p.board?.nodes.length ?? 0, arrows: p.board?.edges.length ?? 0 };
   if (key === "design") return { chars: p.design?.length ?? 0 };
   if (key === "checks") return { ticked: (p.checks ?? []).filter(Boolean).length, of: c.design?.checklist.length ?? 0 };
   if (key === "follow") return { covered: (p.follow ?? []).filter(Boolean).length, of: p.follow?.length ?? 0 };
   return {};
 }
 
-const STEP_FIELDS: (keyof LessonProgress)[] = ["watched", "read", "post", "est", "built", "design", "checks", "follow"];
+const STEP_FIELDS: (keyof LessonProgress)[] = ["watched", "read", "post", "est", "built", "drawn", "design", "checks", "follow"];
 
 /** Watches the course state and reports what changed. Off in design previews. */
 export function useActivity(s: CourseState, ready: boolean, preview: boolean) {

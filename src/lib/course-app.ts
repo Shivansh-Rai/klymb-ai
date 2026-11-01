@@ -9,6 +9,7 @@ import {
   type QuickCheck,
 } from "@/data/system-design/course-app";
 import type { Day, Lang, Question as ChoiceQuestion } from "@/data/system-design/types";
+import type { Board } from "@/lib/canvas";
 
 /**
  * State and transitions for the System Design course app. Everything here is
@@ -35,6 +36,8 @@ export interface LessonProgress {
   /** Estimate answers, as typed. */
   est?: number[];
   built?: number;
+  /** "Draw it": the learner's own board, saved as they go, and its result once checked. */
+  board?: Board; drawn?: { score: number; of: number };
   /** The design attempt, and the self-check ticks after the walkthrough. */
   design?: string; checks?: boolean[];
   follow?: boolean[];
@@ -143,7 +146,7 @@ export interface CourseState {
 export const score = (questions: ChoiceQuestion[], picks: number[]) =>
   picks.filter((p, k) => questions[k]?.choices[p]?.best).length;
 
-export type StepKey = "watch" | "reveal" | "prove" | "estimate" | "build" | "design" | "follow" | "done";
+export type StepKey = "watch" | "reveal" | "prove" | "estimate" | "build" | "draw" | "design" | "follow" | "done";
 
 export type CheckStage = "intro" | "q" | "result" | "passed";
 
@@ -156,14 +159,17 @@ export function checkStageFor(p?: LessonProgress): CheckStage {
 
 /**
  * The day's assessment is numbered as one run: the check's questions, then the
- * estimates, the build, the design and the follow-ups, as many as the day has.
+ * estimates, the build, the drawing, the design and the follow-ups, as many as the day has.
  * `first` is where each part's numbering starts.
  */
 export function assessmentParts(id: string, lang: Lang = "en") {
   const c = dayOf(id)?.copy[lang];
-  const sizes = { prove: c?.post.length ?? 0, estimate: c?.estimates?.length ?? 0, build: c?.build ? 1 : 0, design: c?.design ? 1 : 0, follow: c?.followUps?.length ?? 0 };
-  const first = { prove: 1, estimate: 1 + sizes.prove, build: 1 + sizes.prove + sizes.estimate, design: 1 + sizes.prove + sizes.estimate + sizes.build, follow: 1 + sizes.prove + sizes.estimate + sizes.build + sizes.design };
-  return { total: first.follow - 1 + sizes.follow, first, sizes };
+  const sizes = { prove: c?.post.length ?? 0, estimate: c?.estimates?.length ?? 0, build: c?.build ? 1 : 0, draw: c?.canvas ? 1 : 0, design: c?.design ? 1 : 0, follow: c?.followUps?.length ?? 0 };
+  const order = ["prove", "estimate", "build", "draw", "design", "follow"] as const;
+  const first = {} as Record<(typeof order)[number], number>;
+  let n = 1;
+  for (const k of order) { first[k] = n; n += sizes[k]; }
+  return { total: n - 1, first, sizes };
 }
 
 /**
@@ -177,6 +183,7 @@ export function assessmentStep(s: CourseState, id: string): number {
     case "prove": return s.checkStage === "q" ? first.prove + s.checkIdx : 0;
     case "estimate": return p.est ? 0 : first.estimate + s.estIdx;
     case "build": return p.built === undefined ? first.build : 0;
+    case "draw": return p.drawn ? 0 : first.draw;
     case "design": return p.design ? 0 : first.design;
     case "follow": return p.follow ? 0 : first.follow + Math.min(s.fuIdx, Math.max(sizes.follow - 1, 0));
     default: return 0;
@@ -195,6 +202,7 @@ export function lessonSteps(s: CourseState, id: string, day: Day) {
   const add = (key: StepKey, done: boolean) => steps.push({ key, done, open: steps[steps.length - 1].done });
   if (c.estimates?.length) add("estimate", !!p.est);
   if (c.build) add("build", p.built !== undefined);
+  if (c.canvas) add("draw", !!p.drawn);
   if (c.design) add("design", !!p.design);
   if (c.followUps?.length) add("follow", !!p.follow);
   steps.push({ key: "done", done: s.done.includes(id), open: flowDone(s, id) });
@@ -282,7 +290,7 @@ export function flowDone(s: CourseState, id: string) {
   if (!d) return false;
   const p = s.lessons[id] ?? {};
   const c = d.copy[s.lang];
-  return !!(p.watched && p.post && (!c.estimates?.length || p.est) && (!c.build || p.built !== undefined) && (!c.design || p.design) && (!c.followUps?.length || p.follow));
+  return !!(p.watched && p.post && (!c.estimates?.length || p.est) && (!c.build || p.built !== undefined) && (!c.canvas || p.drawn) && (!c.design || p.design) && (!c.followUps?.length || p.follow));
 }
 
 /** Saves a lesson step and counts today towards the streak. */

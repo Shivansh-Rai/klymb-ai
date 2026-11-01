@@ -28,6 +28,7 @@ const STEPS: Record<string, string> = {
   read: "Read the story instead of watching",
   est: "Did the estimation exercise",
   built: "Built the diagram",
+  drawn: "Drew the design from scratch",
   design: "Wrote their own design",
   checks: "Ticked the design self-check",
   follow: "Answered the interviewer follow-ups",
@@ -68,6 +69,7 @@ function describe(e: TrailEvent): Omit<TrailLine, "at" | "lesson"> {
       const detail =
         e.step === "est" ? `${p.inRange} of ${p.of} numbers close enough` :
         e.step === "built" ? (Number(p.wrong) ? `${p.wrong} wrong drops on the way` : "no wrong drops") :
+        e.step === "drawn" ? `${p.score} of ${p.of} connections right` :
         e.step === "design" ? `${p.chars} characters` :
         e.step === "checks" ? `${p.ticked} of ${p.of} points covered` :
         e.step === "follow" ? `knew ${p.covered} of ${p.of}` : undefined;

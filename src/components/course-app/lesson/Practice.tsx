@@ -8,6 +8,7 @@ import { Icon } from "../icons";
 import { stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 import { DesignIt } from "./DesignIt";
+import { DesignCanvas } from "./DesignCanvas";
 import { DiagramBuilder } from "./DiagramBuilder";
 import { EstimateQuiz } from "./EstimateQuiz";
 import { Feedback } from "./Feedback";
@@ -21,11 +22,12 @@ import { GoogleButton, useCourseUser } from "../user";
 
 const UI = {
   en: {
-    steps: { watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
+    steps: { watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
     assessment: "Assessment", dayComplete: "Day complete",
     reveal: "What really happens", build: "Build it yourself", prove: "Prove it", follow: "Interviewer follow-ups", unlocked: "Day complete",
     proveSub: "5 questions · 60% to pass · answers at the end", concept: "Today’s idea",
     built: (n: number) => (n === 0 ? "Built, first try." : `Built · ${n} wrong ${n === 1 ? "drop" : "drops"}`),
+    drawn: (n: number, of: number) => `Drawn · ${n} of ${of} connections`,
     followed: (n: number, of: number) => `You had ${n} of ${of} follow-ups covered.`,
     estimate: "Estimate it", estimateSub: "Back-of-the-envelope numbers", estimated: (n: number, of: number) => `${n} of ${of} estimates in range.`,
     design: "Design it", designSub: "Attempt first, then the walkthrough", designed: "Attempt written, walkthrough read.",
@@ -39,11 +41,12 @@ const UI = {
     complete: "Mark complete", redo: "Do this lesson again",
   },
   hi: {
-    steps: { watch: "Watch", reveal: "Samjho", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
+    steps: { watch: "Watch", reveal: "Samjho", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
     assessment: "Assessment", dayComplete: "Din complete",
     reveal: "Asal mein kya hota hai", build: "Khud banao", prove: "Prove it", follow: "Interviewer follow-ups", unlocked: "Day complete",
     proveSub: "5 sawaal · 60% se pass · jawab end mein", concept: "Aaj ka idea",
     built: (n: number) => (n === 0 ? "Pehli baar mein ban gaya." : `Ban gaya · ${n} galat ${n === 1 ? "drop" : "drops"}`),
+    drawn: (n: number, of: number) => `Draw ho gaya · ${of} mein se ${n} connections`,
     followed: (n: number, of: number) => `${of} mein se ${n} follow-ups aate the.`,
     estimate: "Estimate it", estimateSub: "Rough hisaab, napkin pe", estimated: (n: number, of: number) => `${of} mein se ${n} estimates range mein.`,
     design: "Design it", designSub: "Pehle khud try, phir walkthrough", designed: "Attempt likha, walkthrough padha.",
@@ -262,6 +265,12 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
           p.built !== undefined
             ? <Done text={ui.built(p.built)} next={onward("build")} onNext={() => go(after("build"))} />
             : <DiagramBuilder key={s.lang} task={c.build} lang={s.lang} onDone={(built) => set({ built }, after("build"))} />
+        )}
+
+        {at === "draw" && c.canvas && (
+          p.drawn
+            ? <Done text={ui.drawn(p.drawn.score, p.drawn.of)} next={onward("draw")} onNext={() => go(after("draw"))} />
+            : <DesignCanvas key={s.lang} task={c.canvas} lang={s.lang} saved={p.board} onSave={(board) => set({ board })} onDone={(score, of) => set({ drawn: { score, of } }, after("draw"))} />
         )}
 
         {at === "design" && c.design && (

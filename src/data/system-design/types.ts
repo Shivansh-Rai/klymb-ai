@@ -47,6 +47,27 @@ export interface BuildTask {
   done: string;
 }
 
+/** The parts a learner can place on the design canvas. */
+export type CanvasPart = "client" | "lb" | "server" | "cache" | "database" | "queue" | "worker" | "storage" | "cdn";
+
+/**
+ * "Draw it": a blank board. The learner places parts, connects them with
+ * arrows (from the one that asks to the one that answers), then compares with
+ * the model. A connection counts when any box of the first part points to any
+ * box of the second, so two servers both pointing to the database is fine.
+ */
+export interface CanvasTask {
+  title: string;
+  brief: string;
+  /** The parts offered, in tray order. Parts the model doesn't use are decoys. */
+  parts: CanvasPart[];
+  /** The model design. x and y place each box on the board, from 0 to 1. */
+  model: { nodes: { id: string; part: CanvasPart; x: number; y: number }[]; edges: [string, string][] };
+  /** Why each model connection is there, by "from>to" part pair, shown when it's missing. */
+  why: Record<string, string>;
+  done: string;
+}
+
 /** A back-of-the-envelope estimate: type a number, then see the working. */
 export interface Estimate {
   id: string;
@@ -99,6 +120,7 @@ export interface DayCopy {
   post: Question[];
   estimates?: Estimate[];
   build?: BuildTask;
+  canvas?: CanvasTask;
   design?: DesignAttempt;
   followUps?: FollowUp[];
   interview: string[];
