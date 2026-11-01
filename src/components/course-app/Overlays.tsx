@@ -31,7 +31,7 @@ export function Splash({ act }: { act: Act }) {
 const OVERVIEW = "/videos/system-design/overview-21day";
 
 /** The course overview, free for everyone. The poster plays it on tap, then native controls take over. Its captions are burned in. */
-function OverviewVideo() {
+export function OverviewVideo() {
   const seen = useRef(new Set<number>());
   const [started, setStarted] = useState(false);
   const onTime = (v: HTMLVideoElement) => {

@@ -6,6 +6,7 @@ import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, less
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
+import { OverviewVideo } from "../Overlays";
 import { Bar, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 
@@ -195,6 +196,8 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
               </button>
             ))}
           </div>
+          <h6 className="sd-h6 mt-6 mb-2">Course intro</h6>
+          <OverviewVideo />
         </section>
       </div>
     </div>
