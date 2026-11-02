@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { SignOutButton } from "@/components/admin/SignOutButton";
 import { Wordmark } from "@/components/layout/Wordmark";
 import { currentAdminEmail } from "@/auth";
 import { getAdmin } from "@/lib/admin/auth";
+import { signInFailedPath } from "@/lib/sd-offer";
 
 export const metadata: Metadata = { title: "Admin sign-in", robots: { index: false, follow: false } };
 
 export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   if (await getAdmin()) redirect("/admin");
+
+  // Auth.js sends every failed sign-in here, including a learner who backed out at Google.
+  if (error) {
+    const jar = await cookies();
+    const back = signInFailedPath(jar.get("__Secure-authjs.callback-url")?.value ?? jar.get("authjs.callback-url")?.value);
+    if (back) redirect(back);
+  }
 
   // Signed in with Google, but not on the allowlist: say so plainly instead of
   // looping. A company code sign-in gets the Google button instead.

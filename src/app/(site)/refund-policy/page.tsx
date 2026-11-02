@@ -1,24 +1,55 @@
-import { notFound } from "next/navigation";
 import { HIDE_MONEY } from "@/lib/site-status";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage, Section } from "@/components/legal/LegalPage";
-import { grievance, refund } from "@/data/legal";
+import { grievance, refund, sdRefund } from "@/data/legal";
 import { allFree, priceFrom, priceTo } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Refund Policy",
-  description: "Complete all 30 days of your Klymb.ai cohort and we refund 100% of your fee. The conditions, in full.",
+  description: "Finish the course and we refund 100% of your fee. The conditions, in full.",
 };
 
+/** The course on sale. It stands alone while HIDE_MONEY keeps the 30-day tracks' fees off the site. */
+function SystemDesignRefund({ n }: { n: string }) {
+  return (
+    <Section n={n} title="System Design" plain="Finish all 21 lessons, pass every check, take the final assessment: your fee comes back in full.">
+      <p>{sdRefund.headline}</p>
+      <p>{sdRefund.earlyAccess}</p>
+      <p>All of the following must be true:</p>
+      <ul>
+        {sdRefund.conditions.map((c) => <li key={c}>{c}</li>)}
+      </ul>
+      <p>{sdRefund.window}</p>
+      <p>{sdRefund.payout}</p>
+      <p>{sdRefund.partial}</p>
+      <p>{sdRefund.forfeit}</p>
+      <p>{sdRefund.duplicate}</p>
+      <p>
+        This refund is tied to finishing the course and nothing else. It is not a job guarantee. To claim, or if you
+        disagree with a decision, write to <a href={`mailto:${grievance.email}`}>{grievance.email}</a>. We acknowledge
+        within {grievance.acknowledgeWithin} and aim to resolve within {grievance.resolveWithin}. Nothing in this policy
+        limits your rights under India&apos;s consumer protection law.
+      </p>
+    </Section>
+  );
+}
+
 export default function RefundPolicyPage() {
-  if (HIDE_MONEY) notFound();
+  if (HIDE_MONEY) {
+    return (
+      <LegalPage title="Refund Policy" intro={sdRefund.headline}>
+        <SystemDesignRefund n="1." />
+      </LegalPage>
+    );
+  }
   return (
     <LegalPage
       title="Refund Policy"
       intro={refund.headline}
     >
+      <SystemDesignRefund n="A." />
       {allFree && (
         <p className="mb-8 rounded-card bg-red-tint p-4 text-sm font-semibold text-ink">
           Every Klymb.ai course is free right now: no payment is taken, so there is nothing to refund. This policy applies to paid courses

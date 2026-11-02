@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
+import { recordPaid, recordRefund } from "@/lib/payments";
 import { webhookAction, webhookSignatureValid } from "@/lib/razorpay-webhook";
 import { sendReceiptOnce } from "@/lib/receipt";
 
@@ -27,13 +28,7 @@ export async function POST(req: Request) {
   const now = new Date().toISOString();
 
   if (action.kind === "paid") {
-    // Never turns a refund back into a payment.
-    const { error } = await sql.run`
-      update course.payments
-         set status = 'paid', razorpay_payment_id = ${action.paymentId}, updated_at = ${now}
-       where razorpay_order_id = ${action.orderId}
-         and status in ('created', 'failed', 'paid')
-    `;
+    const { error } = await recordPaid(sql, action.orderId, action.paymentId);
     if (error) {
       console.error("webhook paid update failed:", action.orderId, error.code);
       return NextResponse.json({ error: "Retry" }, { status: 500 }); // Razorpay retries non-2xx
@@ -46,10 +41,8 @@ export async function POST(req: Request) {
        where razorpay_order_id = ${action.orderId} and status = 'created'
     `;
   } else if (action.kind === "refunded") {
-    await sql.run`
-      update course.payments set status = 'refunded', updated_at = ${now}
-       where razorpay_payment_id = ${action.paymentId}
-    `;
+    const { error } = await recordRefund(sql, action.paymentId);
+    if (error) return NextResponse.json({ error: "Retry" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

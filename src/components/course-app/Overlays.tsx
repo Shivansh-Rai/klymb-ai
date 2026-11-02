@@ -2,9 +2,10 @@
 
 import clsx from "clsx";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { QUESTIONS, QUICK_CHECKS, WELCOME } from "@/data/system-design/course-app";
-import { answerQuickCheck, closeQuickCheck, commit, fmt, localDate, openLesson, quickCheckAt, streak, type CourseState } from "@/lib/course-app";
+import { QUESTIONS, WELCOME } from "@/data/system-design/course-app";
+import { answerQuickCheck, closeQuickCheck, commit, fmt, lessonDay, localDate, openLesson, quickCheckAt, quickCheckOf, streak, type CourseState } from "@/lib/course-app";
 import { Icon } from "./icons";
 import { track } from "./track";
 import { GoogleButton, firstName, useCourseUser } from "./user";
@@ -27,10 +28,10 @@ export function Splash({ act }: { act: Act }) {
   );
 }
 
-const OVERVIEW = "/videos/system-design/overview";
+const OVERVIEW = "/videos/system-design/overview-21day";
 
-/** The 90-second course overview. The poster plays it on tap, then native controls take over. */
-function OverviewVideo() {
+/** The course overview, free for everyone. The poster plays it on tap, then native controls take over. Its captions are burned in. */
+export function OverviewVideo() {
   const seen = useRef(new Set<number>());
   const [started, setStarted] = useState(false);
   const onTime = (v: HTMLVideoElement) => {
@@ -52,8 +53,7 @@ function OverviewVideo() {
           onTimeUpdate={(e) => onTime(e.currentTarget)}
           className="aspect-video w-full rounded-xl border-2 border-sd-ink bg-black"
         >
-          <source src="/api/video/overview.mp4" type="video/mp4" />
-          <track kind="captions" src={`${OVERVIEW}.vtt`} srcLang="hi" label="Hinglish" default />
+          <source src="/api/video/overview-21day.mp4" type="video/mp4" />
         </video>
       ) : (
         <button type="button" onClick={() => { setStarted(true); track("video_play", "overview"); }} aria-label="Play the course overview" className="relative aspect-video w-full cursor-pointer overflow-hidden rounded-xl border-2 border-sd-ink bg-black">
@@ -62,40 +62,39 @@ function OverviewVideo() {
             <span className="flex size-[60px] items-center justify-center rounded-xl bg-sd-accent-400 text-sd-ink shadow-[0_8px_24px_rgba(0,0,0,.35)]"><Icon name="play" size={26} /></span>
           </span>
           <span className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/75 to-transparent px-3 py-2 text-xs font-semibold text-white">
-            <span>0:00 / 1:26</span>
+            <span>0:00 / 2:26</span>
             <span className="h-[3px] flex-1 rounded-full bg-white/35" />
-            <span className="rounded border-[1.5px] border-white px-1 py-px text-[10px] font-extrabold">CC</span>
           </span>
         </button>
       )}
-      <figcaption className="text-xs text-sd-n-700">Course overview · 1:26 · Hinglish, CC</figcaption>
+      <figcaption className="text-xs text-sd-n-700">Course overview · 2:26 · Hinglish, captions on screen</figcaption>
     </figure>
   );
 }
 
-/** Signed out: Google first (it saves progress to your name), Day 0 without signing in as the quiet option. Signed in: straight to Day 0. */
+/** Signed out: Google first (it saves progress to your name), Day 1 without signing in as the quiet option. Signed in: straight to Day 1. */
 function StartButtons({ user, startDay0 }: { user: boolean; startDay0: () => void }) {
   const link = "cursor-pointer self-start border-0 bg-transparent px-0 py-1.5 text-sm font-semibold text-sd-n-700 underline underline-offset-4 hover:text-sd-ink";
   if (user) {
     return (
-      <button type="button" onClick={startDay0} className="sd-btn sd-btn-primary h-14 justify-between text-base">Start Day 0<Icon name="arrowR" /></button>
+      <button type="button" onClick={startDay0} className="sd-btn sd-btn-primary h-14 justify-between text-base">Start Day 1<Icon name="arrowR" /></button>
     );
   }
   return (
     <div className="flex flex-col gap-1.5">
       <GoogleButton lesson="0-0" where="welcome" label="Continue with Google" className="h-14 border-2 border-sd-ink text-base" />
       <span className="text-xs text-sd-n-700">Saves your progress.</span>
-      <button type="button" onClick={startDay0} className={link}>Try Day 0 first</button>
+      <button type="button" onClick={startDay0} className={link}>Go to Day 1</button>
     </div>
   );
 }
 
-/** The welcome: Kamran says hello, the page says what the course gives you, and one button starts Day 0. */
+/** The welcome: Kamran says hello, the page says what the course gives you, and one button starts Day 1. */
 export function Onboarding({ act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
   const first = firstName(user);
   const done = (p: CourseState): CourseState => ({ ...p, onboarded: true });
-  // The commitment comes first, once; then Day 0.
+  // The commitment comes first, once; then Day 1.
   const startDay0 = () => { track("welcome", null, null, { choice: "day0" }); act((p) => (p.commitment ? openLesson(done(p), "0-0") : { ...done(p), screen: "commit" })); };
 
   return (
@@ -105,10 +104,10 @@ export function Onboarding({ act }: { s: CourseState; act: Act }) {
           <span className="sd-kicker text-sd-accent-700">System Design · 21 days</span>
           <div className="flex items-center gap-3">
             <Image src="/mascots/kamran-excited-v2.png" alt="Kamran, your study buddy" width={56} height={56} className="size-14 flex-none object-contain" />
-            <p className="m-0 text-sm leading-[1.4] text-sd-n-800">Hi{first ? ` ${first}` : ""}, I’m Kamran. Day 0 takes about 12 minutes.</p>
+            <p className="m-0 text-sm leading-[1.4] text-sd-n-800">Hi{first ? ` ${first}` : ""}, I’m Kamran. Watch the intro, then start Day 1.</p>
           </div>
           <h1 className="m-0 text-[38px] leading-[.95] tracking-[-0.045em] text-balance lg:text-[60px]">System design, phone pe.</h1>
-          <p className="m-0 text-[15px] text-pretty text-sd-n-800 lg:text-[17px]">No experience needed. Day 0 starts from the basics.</p>
+          <p className="m-0 text-[15px] text-pretty text-sd-n-800 lg:text-[17px]">No system design experience needed. Day 1 starts from the basics.</p>
           <div className="hidden max-w-[360px] lg:block"><StartButtons user={!!user} startDay0={startDay0} /></div>
         </div>
         <OverviewVideo />
@@ -131,7 +130,7 @@ export function Onboarding({ act }: { s: CourseState; act: Act }) {
 
 /** The ungraded in-video question: a bottom sheet on mobile, a centred card on web. */
 export function QuickCheckSheet({ s, act }: { s: CourseState; act: Act }) {
-  const qc = QUICK_CHECKS[s.cur];
+  const qc = quickCheckOf(s.cur)!;
   const picked = s.qcPick;
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => { first.current?.focus(); }, []);
@@ -184,6 +183,24 @@ export function QuickCheckSheet({ s, act }: { s: CourseState; act: Act }) {
   );
 }
 
+/** A lesson this viewer hasn't bought: what the full course gives, and the way to the offer. */
+export function PaywallSheet({ s, act }: { s: CourseState; act: Act }) {
+  const offer = useRef<HTMLAnchorElement>(null);
+  useEffect(() => { offer.current?.focus(); }, []);
+  const close = () => act((p) => ({ ...p, paywall: false }));
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col items-stretch justify-end bg-sd-n-900/50 lg:items-center lg:justify-center" onKeyDown={(e) => { if (e.key === "Escape") close(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="sd-pay-t" className="sd-a-in sd-lg-shadow flex flex-col gap-3 rounded-t-2xl border-t-[3px] border-sd-accent bg-sd-bg px-5 pt-[18px] pb-[34px] lg:w-[min(480px,90%)] lg:rounded-2xl lg:p-6" style={{ animationDuration: ".35s" }}>
+        <span className="sd-kicker text-sd-accent-700">{lessonDay(s.cur)}</span>
+        <h3 id="sd-pay-t" className="m-0 text-2xl leading-[1.15] tracking-[-0.02em] text-balance">This lesson is in the full course.</h3>
+        <p className="m-0 text-[15px] leading-[1.45] text-pretty text-sd-n-800">The course intro is free. The full course opens every lesson, and you get 100% of your money back when you finish it.</p>
+        <Link ref={offer} href="/system-design" className="sd-btn sd-btn-primary mt-1 h-[52px] justify-between text-base">See the offer<Icon name="arrowR" /></Link>
+        <button type="button" onClick={close} className="sd-btn sd-btn-ghost self-start">Not now</button>
+      </div>
+    </div>
+  );
+}
+
 /** Asked before throwing away a started assessment. "Keep going" is the main choice. */
 export function LeaveQuizDialog({ s, act }: { s: CourseState; act: Act }) {
   const stay = useRef<HTMLButtonElement>(null);
@@ -216,7 +233,7 @@ const PLEDGES = (goal: number): { icon: "shield" | "flame"; title: string; body:
 ];
 const HOLD_MS = 1200;
 
-/** After the welcome: two promises, a signature, and a press-and-hold to make it official. Then Day 0. */
+/** After the welcome: two promises, a signature, and a press-and-hold to make it official. Then Day 1. */
 export function Commitment({ s, act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
   const [pledge, setPledge] = useState([false, false]);
@@ -299,7 +316,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
                 <span className="text-xs text-sd-n-700">Signed {signed}</span>
               </div>
             </div>
-            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start Day 0<Icon name="arrowR" /></button>
+            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start Day 1<Icon name="arrowR" /></button>
           </>
         )}
       </div>

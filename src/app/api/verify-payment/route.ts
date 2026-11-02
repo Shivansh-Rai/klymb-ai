@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
+import { recordPaid } from "@/lib/payments";
 import { razorpayKeys, signatureValid } from "@/lib/razorpay";
 import { sendReceiptOnce } from "@/lib/receipt";
 
@@ -23,12 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Payment could not be verified." }, { status: 400 });
   }
 
-  const { data, error } = await sql.row<{ id: string }>`
-    update course.payments
-       set status = 'paid', razorpay_payment_id = ${paymentId}, updated_at = ${new Date().toISOString()}
-     where razorpay_order_id = ${orderId}
-    returning id
-  `;
+  const { data, error } = await recordPaid(sql, orderId, paymentId);
   if (error || !data) {
     console.error("payments update failed:", orderId, error?.code, error?.message);
     return NextResponse.json({ error: "Payment received but not recorded. Email us with your payment ID." }, { status: 500 });

@@ -4,9 +4,9 @@ import "./course-app.css";
 import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
-import { TAB_SCREENS, fmt, hasQuickCheck, lesson, miniActive, openLesson, streak, togglePlay, type CourseState, type Tab } from "@/lib/course-app";
+import { TAB_SCREENS, fmt, hasQuickCheck, lesson, miniActive, openLesson, streak, togglePlay, type CourseState, type LessonContent, type Tab } from "@/lib/course-app";
 import { Icon, type IconName } from "./icons";
-import { Commitment, LeaveQuizDialog, Onboarding, QuickCheckSheet, Splash, StreakPop, Toast } from "./Overlays";
+import { Commitment, LeaveQuizDialog, Onboarding, PaywallSheet, QuickCheckSheet, Splash, StreakPop, Toast } from "./Overlays";
 import { Course } from "./screens/Course";
 import { Home } from "./screens/Home";
 import { Notifications } from "./screens/Inbox";
@@ -64,7 +64,7 @@ function Sidebar({ s, act }: { s: CourseState; act: Act }) {
       <div className="px-6"><Image src="/brand/klymb-logo.svg" alt="Klymb.ai" width={117} height={18} className="h-[18px] w-auto" priority /></div>
       <div className="px-6">
         <div className="text-[11px] font-semibold tracking-[0.1em] text-sd-accent-700 uppercase">Course</div>
-        <div className="text-[17px] font-extrabold">System Design in 21 Days</div>
+        <div className="text-[17px] font-extrabold">System Design Essentials</div>
       </div>
       <nav aria-label="Course" className="flex flex-col border-t-2 border-sd-divider">
         {TABS.map(([k, label, icon]) => {
@@ -119,9 +119,11 @@ function TabBar({ s, act }: { s: CourseState; act: Act }) {
  * The System Design course app: one responsive layout. Under 1024px it is the
  * mobile app (tabs along the bottom, full-screen lessons and assessments);
  * from 1024px a sidebar replaces the tabs and panels sit side by side.
+ * `lessons` is what this viewer may open, read on the server: paid lessons
+ * reach the browser only this way.
  */
-export function CourseApp({ user = null }: { user?: CourseUser | null }) {
-  const { s, act, ready } = useCourseApp();
+export function CourseApp({ user = null, lessons, enrolled }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean }) {
+  const { s, act, ready } = useCourseApp({ lessons, enrolled });
   const scroller = useRef<HTMLDivElement>(null);
 
   // The app is one screen tall and scrolls inside. If the page behind it could scroll too, phone browsers would
@@ -179,6 +181,7 @@ export function CourseApp({ user = null }: { user?: CourseUser | null }) {
       {s.streakPop && <StreakPop s={s} act={act} />}
       {s.qcOpen && s.screen === "player" && hasQuickCheck(s.cur) && <QuickCheckSheet s={s} act={act} />}
       {s.confirmExit && <LeaveQuizDialog s={s} act={act} />}
+      {s.paywall && <PaywallSheet s={s} act={act} />}
       {s.toast && <Toast text={s.toast} />}
     </div>
     </CourseUserProvider>

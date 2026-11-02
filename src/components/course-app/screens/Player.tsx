@@ -179,7 +179,7 @@ function CourseLessons({ s, act }: { s: CourseState; act: Act }) {
               >
                 <LessonMark done={v.done} cur={v.cur} locked={v.locked} />
                 <span className={clsx("min-w-0", v.cur && "font-extrabold", v.dim && "opacity-45")}>{lessonDay(id)} · {v.title}</span>
-                <Duration v={v} />
+                <Duration v={v} time={false} />
               </button>
             );
           })}

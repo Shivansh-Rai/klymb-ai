@@ -1,16 +1,21 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { LESSON_DAYS, QUESTIONS } from "../src/data/system-design/course-app";
+import { QUESTIONS } from "../src/data/system-design/course-app";
+import { LESSON_DAYS } from "../src/data/system-design/lessons";
+import { lessonContent } from "../src/lib/sd-lessons";
 import {
   ALL_IDS, addNote, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
   migrateLegacy, miniActive, nextQuestion, openLesson, pickOption, previewState, setAnswer, stageFor, streak, tick, toStored, togglePlay,
-  updateLesson, type CourseState,
+  setLessons, updateLesson, type CourseState,
 } from "../src/lib/course-app";
+
+// The app gets its lessons from the server; these tests take the full set, as a seat holder does.
+setLessons(lessonContent(true));
 
 const NOW = new Date(2026, 9, 21, 9, 0, 0).getTime();
 const home = (): CourseState => ({ ...defaultState(NOW), screen: "home", onboarded: true });
-/** Day 0 with every practice step done. */
-const day0Done = (s: CourseState) => updateLesson(s, "0-0", { watched: true, built: 0, post: [0, 0, 0, 0], est: [1200, 12, 700], follow: [true, true, false, true] }, NOW);
+/** Day 1 with every practice step done. */
+const day0Done = (s: CourseState) => updateLesson(s, "0-0", { watched: true, built: 0, drawn: { score: 2, of: 2 }, post: [0, 0, 0, 0, 0], follow: [true, true, false] }, NOW);
 
 test("fmt shows m:ss and never goes negative", () => {
   assert.equal(fmt(0), "0:00");
@@ -97,11 +102,10 @@ test("a lesson can't be completed until its practice is done", () => {
   assert.match(blocked.toast ?? "", /practice/);
 });
 
-test("finishing Day 0 completes the Start here module and opens the recap", () => {
+test("finishing Day 1 marks it done and opens Day 2", () => {
   const s = completeNext(day0Done({ ...home(), screen: "player", cur: "0-0" }), false, NOW);
-  assert.equal(s.screen, "recap");
-  assert.equal(s.recapMod, 0);
-  assert.equal(s.cur, "1-0");
+  assert.equal(s.screen, "player");
+  assert.equal(s.cur, "0-1");
   assert.deepEqual(s.done, ["0-0"]);
 });
 
@@ -116,10 +120,10 @@ test("a lesson opens on the step it still has to do, and the next one on its vid
   assert.equal(read.stage, "prove", "learn is read, the assessment still stands");
 
   const passed = openLesson(updateLesson(home(), "0-0", { watched: true, post: [0, 0, 0, 0, 0] }, NOW), "0-0", NOW);
-  assert.equal(passed.stage, "estimate", "past the assessment, on to the practice");
+  assert.equal(passed.stage, "build", "past the assessment, on to the practice");
 
   const on = completeNext(day0Done({ ...home(), screen: "player", cur: "0-0", stage: "done" }), false, NOW);
-  assert.equal(on.stage, "watch", "Day 1 starts on its own video, not Day 0's last step");
+  assert.equal(on.stage, "watch", "Day 2 starts on its own video, not Day 1's last step");
   assert.equal(on.checkBusy, false);
 });
 
@@ -137,6 +141,7 @@ function fullProgress(id: string) {
     watched: true, post: c.post.map(() => 0),
     ...(c.estimates?.length ? { est: c.estimates.map((e) => e.answer) } : {}),
     ...(c.build ? { built: 0 } : {}),
+    ...(c.canvas ? { drawn: { score: 1, of: 1 } } : {}),
     ...(c.design ? { design: "A full attempt at the design problem." } : {}),
     ...(c.followUps?.length ? { follow: c.followUps.map(() => true) } : {}),
   };
@@ -173,8 +178,8 @@ test("the last lesson of the course stays put", () => {
 });
 
 test("notes are pinned to the current lesson and moment", () => {
-  const s = addNote({ ...home(), cur: "1-0", t: 42, draft: "  pre-scale before midnight  " }, NOW);
-  assert.deepEqual(s.notes["1-0"], [{ t: 42, text: "pre-scale before midnight" }]);
+  const s = addNote({ ...home(), cur: "0-1", t: 42, draft: "  pre-scale before midnight  " }, NOW);
+  assert.deepEqual(s.notes["0-1"], [{ t: 42, text: "pre-scale before midnight" }]);
   assert.equal(s.draft, "");
 });
 
@@ -198,9 +203,9 @@ test("a finished step counts today; the streak runs back through consecutive day
 });
 
 test("?lesson= opens straight into a lesson; unknown or coming-soon ids are ignored", () => {
-  const s = deepLink(defaultState(NOW), "1-0", NOW);
+  const s = deepLink(defaultState(NOW), "0-1", NOW);
   assert.equal(s.screen, "player");
-  assert.equal(s.cur, "1-0");
+  assert.equal(s.cur, "0-1");
   assert.equal(s.onboarded, true);
   assert.equal(deepLink(defaultState(NOW), FIRST_SOON, NOW).screen, "splash");
   assert.equal(deepLink(defaultState(NOW), "9-9", NOW).screen, "splash");
@@ -209,7 +214,7 @@ test("?lesson= opens straight into a lesson; unknown or coming-soon ids are igno
 test("progress from the old Day pages carries over once", () => {
   const s = migrateLegacy(defaultState(NOW), { day0: { pre: [0, 1, 0], watched: true }, day1: null, lang: "hi" }, NOW);
   assert.deepEqual(s.lessons["0-0"], { watched: true }, "the retired opening quiz is dropped");
-  assert.equal(s.lessons["1-0"], undefined);
+  assert.equal(s.lessons["0-1"], undefined);
   assert.equal(s.lang, "hi");
   const again = migrateLegacy(s, { day0: { watched: false, post: [0, 0, 0, 0, 0] } }, NOW);
   assert.deepEqual(again.lessons["0-0"], { watched: true }, "existing progress wins");
@@ -230,7 +235,7 @@ test("saved progress round-trips, and today's minutes reset on a new day", () =>
 });
 
 test("progress saved by an older version, with downloads in it, still loads", () => {
-  const raw = { ...JSON.parse(JSON.stringify(toStored(home()))), dl: [{ id: "0-0", size: 38 }], dlProg: { "1-0": 40 }, onboarded: true };
+  const raw = { ...JSON.parse(JSON.stringify(toStored(home()))), dl: [{ id: "0-0", size: 38 }], dlProg: { "0-1": 40 }, onboarded: true };
   const s = fromStored(raw, NOW);
   assert.equal(s.screen, "home");
   assert.equal("dl" in s, false, "downloads are no longer part of the state");
@@ -243,13 +248,13 @@ test("a first visit starts on the splash screen", () => {
 });
 
 test("a day with estimates and a design attempt isn't finished until both are done", () => {
-  const base = { pre: [0, 0, 0], watched: true, post: [0, 0, 0, 0], built: 1, follow: [true, true, true, true] };
-  const noEst = updateLesson(home(), "1-0", base, NOW);
-  assert.equal(flowDone(noEst, "1-0"), false, "estimates still to do");
-  const noDesign = updateLesson(home(), "1-0", { ...base, est: [267, 30000, 267] }, NOW);
-  assert.equal(flowDone(noDesign, "1-0"), false, "design attempt still to write");
-  const all = updateLesson(noDesign, "1-0", { design: "Waiting room and one atomic stock counter." }, NOW);
-  assert.equal(flowDone(all, "1-0"), true);
+  const base = { pre: [0, 0, 0], watched: true, post: [0, 0, 0, 0], built: 1, drawn: { score: 3, of: 3 }, follow: [true, true, true, true] };
+  const noEst = updateLesson(home(), "0-1", base, NOW);
+  assert.equal(flowDone(noEst, "0-1"), false, "estimates still to do");
+  const noDesign = updateLesson(home(), "0-1", { ...base, est: [267, 30000, 267] }, NOW);
+  assert.equal(flowDone(noDesign, "0-1"), false, "design attempt still to write");
+  const all = updateLesson(noDesign, "0-1", { design: "Waiting room and one atomic stock counter." }, NOW);
+  assert.equal(flowDone(all, "0-1"), true);
 });
 
 test("course activity events are cut down to known names and short, flat values", async () => {
@@ -264,8 +269,7 @@ test("course activity events are cut down to known names and short, flat values"
 
 test("the admin summary counts each learner once per step and finds where they stopped", async () => {
   const { summarise } = await import("../src/lib/sd-summary");
-  const { LESSON_DAYS } = await import("../src/data/system-design/course-app");
-  const ev = (anon: string, event: string, step: string | null, props: Record<string, unknown> = {}, lesson = "0-0") =>
+    const ev = (anon: string, event: string, step: string | null, props: Record<string, unknown> = {}, lesson = "0-0") =>
     ({ created_at: new Date(NOW).toISOString(), anon_id: anon, email: null, event, lesson, step, props, lang: "en", device: "phone" });
   const best = LESSON_DAYS["0-0"].copy.en.pre.map((q) => q.choices.findIndex((c) => c.best));
   const events = [

@@ -75,7 +75,8 @@ production only once the verification below passes.
 select table_schema, count(*) from information_schema.tables
  where table_name in ('learners','registrations','payments','day_submissions',
                       'assessment_results','support_tickets','admin_audit_log',
-                      'push_subscriptions','rate_limit_events','admin_users')
+                      'push_subscriptions','rate_limit_events','admin_users',
+                      'enrollments','lesson_checks')
  group by table_schema;
 
 -- As klymb_course: the first is refused, the second works.

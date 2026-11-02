@@ -1,3 +1,7 @@
+import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+
+const LESSON_TOTAL = MODULES.reduce((n, m) => n + m.lessons.length, 0);
+
 /**
  * ─────────────────────────────────────────────────────────────
  *  ENTITY, GRIEVANCE AND POLICY DETAILS
@@ -81,6 +85,33 @@ export const refund = {
   /** confirm: is this right? A learner who is removed for cheating presumably forfeits. */
   forfeit: "A place ended for plagiarism, fabricated evidence or undisclosed AI use does not qualify for the refund.",
   cancellation: "Cancel before your Day 1 opens and you are refunded in full, no conditions. After that, the completion guarantee above is the route to a refund.",
+} as const;
+
+/**
+ * System Design: finish the whole course, get the whole fee back. It is sold
+ * in early access, so nobody can finish until the last lesson is out, and the
+ * conditions below are what stop five short lessons refunding the full fee.
+ *
+ * ⚠️ `confirm` marks what should be checked by counsel before the first sale.
+ */
+export const sdRefund = {
+  headline: "Complete System Design end to end and we refund 100% of your fee.",
+  earlyAccess: `System Design is sold in early access. ${BUILT_LESSONS.length} of its ${LESSON_TOTAL} lessons are live today. The rest are released as they are ready and are included in what you paid.`,
+  /** confirm: is every one of these required? */
+  conditions: [
+    `All ${LESSON_TOTAL} lessons finished, from Day 1 to Day ${LESSON_TOTAL}`,
+    "The lesson check passed on every lesson, signed in with the Google account you paid with",
+    "The final assessment taken",
+  ],
+  /** confirm: the 60 days, and how it reads against the date the last lesson is promised for. */
+  window: "You can claim once the last lesson is out, and up to 60 days after that. Until then the course cannot be finished, so no claim can be made.",
+  /** confirm: 14 working days. Razorpay refuses a normal refund on a payment older than six months. */
+  payout: "Refunds are paid to the original payment method within 14 working days of your claim, once completion has been verified. If the payment is too old for our payment provider to refund, we pay it by bank transfer instead.",
+  partial: "There is no partial refund. Finishing some of the lessons does not qualify: the point of the guarantee is finishing.",
+  /** confirm: is this right? */
+  forfeit: "Access ended for cheating, shared accounts or fabricated results does not qualify for the refund.",
+  /** confirm: does this need a stated window? */
+  duplicate: "If you are charged twice for the course by mistake, write to us and we refund the extra payment.",
 } as const;
 
 export const dataPoints = {

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Pre-registration lives on the course's own link. */
+/** Pre-registration has closed: this link now goes to the offer. */
 export default function SystemDesignRegisterPage() {
-  redirect("/learn/system-design");
+  redirect("/system-design");
 }

@@ -28,6 +28,7 @@ const STEPS: Record<string, string> = {
   read: "Read the story instead of watching",
   est: "Did the estimation exercise",
   built: "Built the diagram",
+  drawn: "Drew the design from scratch",
   design: "Wrote their own design",
   checks: "Ticked the design self-check",
   follow: "Answered the interviewer follow-ups",
@@ -48,7 +49,7 @@ function describe(e: TrailEvent): Omit<TrailLine, "at" | "lesson"> {
       : { text: "Pressed play", detail: p.at ? `from ${secs(p.at)}` : undefined, tone: "learn" };
     case "video_progress": return { text: e.lesson === "overview" ? `Watched ${p.pct}% of the trailer` : `Watched ${p.pct}% of the video`, tone: "learn" };
     case "signin": return { text: "Signed in with Google", tone: "win" };
-    case "welcome": return { text: p.choice === "commit" ? "Committed to the 21 days (held the button)" : "Chose to jump straight into Day 0", tone: "win" };
+    case "welcome": return { text: p.choice === "commit" ? "Committed to the 21 days (held the button)" : "Chose to jump straight into Day 1", tone: "win" };
     case "tour": return p.action === "finished"
       ? { text: "Finished the quick tour of the lesson screen", tone: "nav" }
       : { text: `Skipped the tour at tip ${p.at}`, tone: "nav" };
@@ -68,6 +69,7 @@ function describe(e: TrailEvent): Omit<TrailLine, "at" | "lesson"> {
       const detail =
         e.step === "est" ? `${p.inRange} of ${p.of} numbers close enough` :
         e.step === "built" ? (Number(p.wrong) ? `${p.wrong} wrong drops on the way` : "no wrong drops") :
+        e.step === "drawn" ? `${p.score} of ${p.of} connections right` :
         e.step === "design" ? `${p.chars} characters` :
         e.step === "checks" ? `${p.ticked} of ${p.of} points covered` :
         e.step === "follow" ? `knew ${p.covered} of ${p.of}` : undefined;

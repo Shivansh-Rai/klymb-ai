@@ -20,6 +20,27 @@ export async function hasPaid(email: string, track: string) {
   return !!data?.length;
 }
 
+/** Postgres: the table isn't there. */
+const UNDEFINED_TABLE = "42P01";
+
+/**
+ * Whether this email may open a course sold by enrolment. Fails open like
+ * hasPaid, for the same reason: an outage never locks out someone who paid.
+ * A missing table is not an outage: the migration hasn't run here, so nobody
+ * holds a seat, and opening the course to everyone would give it away.
+ */
+export async function hasCourseAccess(email: string, course: string) {
+  const sql = db();
+  if (!sql) return true;
+  const { data, error } = await sql.rows<{ id: string }>`
+    select id from course.enrollments
+     where email = ${email} and course = ${course} and status = 'active'
+     limit 1
+  `;
+  if (error) return error.code !== UNDEFINED_TABLE;
+  return !!data?.length;
+}
+
 export type { DayLock } from "@/lib/day-lock";
 
 /** The day lock for a learner, with their payment looked up only when it matters. */

@@ -3,11 +3,12 @@
 import clsx from "clsx";
 import { useState } from "react";
 import type { Day, DayCopy } from "@/data/system-design/types";
-import { ALL_IDS, ASSESSMENT_TOTAL, assessmentStep, completeNext, isSoon, lessonSteps, pad, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
+import { ALL_IDS, assessmentParts, assessmentStep, completeNext, isPaywalled, isSoon, lessonSteps, pad, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 import { DesignIt } from "./DesignIt";
+import { DesignCanvas } from "./DesignCanvas";
 import { DiagramBuilder } from "./DiagramBuilder";
 import { EstimateQuiz } from "./EstimateQuiz";
 import { Feedback } from "./Feedback";
@@ -21,11 +22,12 @@ import { GoogleButton, useCourseUser } from "../user";
 
 const UI = {
   en: {
-    steps: { watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
+    steps: { watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
     assessment: "Assessment", dayComplete: "Day complete",
     reveal: "What really happens", build: "Build it yourself", prove: "Prove it", follow: "Interviewer follow-ups", unlocked: "Day complete",
     proveSub: "5 questions · 60% to pass · answers at the end", concept: "Today’s idea",
     built: (n: number) => (n === 0 ? "Built, first try." : `Built · ${n} wrong ${n === 1 ? "drop" : "drops"}`),
+    drawn: (n: number, of: number) => `Drawn · ${n} of ${of} connections`,
     followed: (n: number, of: number) => `You had ${n} of ${of} follow-ups covered.`,
     estimate: "Estimate it", estimateSub: "Back-of-the-envelope numbers", estimated: (n: number, of: number) => `${n} of ${of} estimates in range.`,
     design: "Design it", designSub: "Attempt first, then the walkthrough", designed: "Attempt written, walkthrough read.",
@@ -39,11 +41,12 @@ const UI = {
     complete: "Mark complete", redo: "Do this lesson again",
   },
   hi: {
-    steps: { watch: "Watch", reveal: "Samjho", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
+    steps: { watch: "Watch", reveal: "Samjho", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
     assessment: "Assessment", dayComplete: "Din complete",
     reveal: "Asal mein kya hota hai", build: "Khud banao", prove: "Prove it", follow: "Interviewer follow-ups", unlocked: "Day complete",
     proveSub: "5 sawaal · 60% se pass · jawab end mein", concept: "Aaj ka idea",
     built: (n: number) => (n === 0 ? "Pehli baar mein ban gaya." : `Ban gaya · ${n} galat ${n === 1 ? "drop" : "drops"}`),
+    drawn: (n: number, of: number) => `Draw ho gaya · ${of} mein se ${n} connections`,
     followed: (n: number, of: number) => `${of} mein se ${n} follow-ups aate the.`,
     estimate: "Estimate it", estimateSub: "Rough hisaab, napkin pe", estimated: (n: number, of: number) => `${of} mein se ${n} estimates range mein.`,
     design: "Design it", designSub: "Pehle khud try, phir walkthrough", designed: "Attempt likha, walkthrough padha.",
@@ -71,20 +74,21 @@ export function inRange(items: { answer: number; tolerance: number }[], mine: nu
  */
 function AssessmentHeader({ s, id, ui }: { s: CourseState; id: string; ui: Ui }) {
   const n = assessmentStep(s, id);
+  const total = assessmentParts(id, s.lang).total;
   return (
     <div className="flex flex-col gap-2.5 border-b border-sd-divider pb-3.5">
       <div className="flex items-end justify-between gap-3">
         <span className="pb-1 text-[11px] font-extrabold tracking-[0.12em] uppercase text-sd-accent-700">{s.stage === "done" ? ui.dayComplete : ui.assessment}</span>
         {n > 0 && (
-          <span aria-label={`Question ${n} of ${ASSESSMENT_TOTAL}`} className="flex items-baseline gap-[3px] font-extrabold tracking-[-0.03em]">
+          <span aria-label={`Question ${n} of ${total}`} className="flex items-baseline gap-[3px] font-extrabold tracking-[-0.03em]">
             <span className="text-[34px] leading-none">{n}</span>
-            <span className="text-[15px] text-sd-n-600">/ {ASSESSMENT_TOTAL}</span>
+            <span className="text-[15px] text-sd-n-600">/ {total}</span>
           </span>
         )}
       </div>
       {n > 0 && (
         <div className="h-1 overflow-hidden rounded-full bg-sd-n-300">
-          <div className="h-full rounded-full bg-sd-accent transition-[width] duration-400" style={{ width: `${(n / ASSESSMENT_TOTAL) * 100}%` }} />
+          <div className="h-full rounded-full bg-sd-accent transition-[width] duration-400" style={{ width: `${(n / total) * 100}%` }} />
         </div>
       )}
     </div>
@@ -172,7 +176,7 @@ function Unlocked({ s, act, id, day, c, ui }: { s: CourseState; act: Act; id: st
   return (
     <div className="flex flex-col gap-6">
       <div className="sd-a-pop flex items-end justify-between rounded-xl bg-sd-accent p-4 text-sd-bg">
-        <div className="flex flex-col"><span className="sd-kicker">Day {day.day} complete</span><span className="text-[22px] font-extrabold tracking-[-0.02em]">{ui.scored(score(c.post, p.post ?? []), c.post.length)}</span></div>
+        <div className="flex flex-col"><span className="sd-kicker">Day {day.day} complete</span><span className="text-[22px] font-extrabold tracking-[-0.02em]">{ui.scored(score(p.review?.[s.lang] ?? c.post, p.post ?? []), c.post.length)}</span></div>
         <Icon name="flame" size={32} />
       </div>
       {!user && (
@@ -245,7 +249,7 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
             act={act}
             id={id}
             questions={c.post}
-            hasNext={!!nextLesson && !isSoon(nextLesson)}
+            hasNext={!!nextLesson && !isSoon(nextLesson) && !isPaywalled(nextLesson)}
             onPass={() => go(after("prove"))}
             onRewatch={() => act((q) => ({ ...q, stage: "watch", checkBusy: false, checkStage: "intro", t: 0, playing: true, ended: false, upNext: 0 }))}
           />
@@ -261,6 +265,12 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
           p.built !== undefined
             ? <Done text={ui.built(p.built)} next={onward("build")} onNext={() => go(after("build"))} />
             : <DiagramBuilder key={s.lang} task={c.build} lang={s.lang} onDone={(built) => set({ built }, after("build"))} />
+        )}
+
+        {at === "draw" && c.canvas && (
+          p.drawn
+            ? <Done text={ui.drawn(p.drawn.score, p.drawn.of)} next={onward("draw")} onNext={() => go(after("draw"))} />
+            : <DesignCanvas key={s.lang} task={c.canvas} lang={s.lang} saved={p.board} onSave={(board) => set({ board })} onDone={(score, of) => set({ drawn: { score, of } }, after("draw"))} />
         )}
 
         {at === "design" && c.design && (

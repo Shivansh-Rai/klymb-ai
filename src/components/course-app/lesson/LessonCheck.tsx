@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 import type { Lang, Question } from "@/data/system-design/types";
-import { ASSESSMENT_TOTAL, PASS_MARK, checkPct, pad, passed, submitCheck, type CourseState, type LessonProgress } from "@/lib/course-app";
+import { PASS_MARK, assessmentParts, checkPct, pad, passed, submitCheck, updateLesson, type CourseState, type LessonProgress } from "@/lib/course-app";
 import { shuffledOrder } from "@/lib/shuffle";
 import { Icon } from "../icons";
 import { stagger, useCountUp } from "../ui";
@@ -14,28 +14,30 @@ const PASS = Math.round(PASS_MARK * 100);
 const UI = {
   en: {
     title: "Check what you learned",
-    count: `${ASSESSMENT_TOTAL} questions`, time: "About 15 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
+    count: (n: number) => `${n} questions`, time: "About 15 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${n} of ${t} correct`,
     passed: "Passed", passedBody: (next: boolean) => (next ? `Next lesson unlocked. Pass mark is ${PASS}%.` : `Pass mark is ${PASS}%.`),
     failed: "Not passed yet", failedBody: `You need ${PASS}% to unlock the next lesson. Rewatch the lesson, then retake the assessment.`,
     answers: "Answers", answer: "Answer", yours: "You picked", skipped: "Skipped",
     rewatch: "Rewatch the lesson", rewatchFirst: "Watch the video again to unlock the retake.", continue: "Continue",
     tries: (n: number) => `Attempt ${n}`, passedWith: (n: number) => `Passed with ${n}%`, see: "See answers",
+    grading: "Checking…", noGrade: "We couldn’t check your answers. Check your connection and try again.",
   },
   hi: {
     title: "Dekho kitna samjha",
-    count: `${ASSESSMENT_TOTAL} sawaal`, time: "Lagbhag 15 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
+    count: (n: number) => `${n} sawaal`, time: "Lagbhag 15 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${t} mein se ${n} sahi`,
     passed: "Pass", passedBody: (next: boolean) => (next ? `Agla lesson khul gaya. Pass mark ${PASS}% hai.` : `Pass mark ${PASS}% hai.`),
     failed: "Abhi pass nahi", failedBody: `Agla lesson kholne ke liye ${PASS}% chahiye. Lesson dobara dekho, phir assessment do.`,
     answers: "Jawab", answer: "Jawab", yours: "Tumne chuna", skipped: "Skip kiya",
     rewatch: "Lesson dobara dekho", rewatchFirst: "Retake kholne ke liye video phir se dekho.", continue: "Aage chalo",
     tries: (n: number) => `Attempt ${n}`, passedWith: (n: number) => `${n}% se pass`, see: "Jawab dekho",
+    grading: "Check ho raha hai…", noGrade: "Jawab check nahi ho paye. Internet dekho aur dobara try karo.",
   },
 };
 
 /** One question at a time, no feedback until the end, so the score is honest. */
-function Questions({ questions, lang, idx, onIdx, onDone }: { questions: Question[]; lang: Lang; idx: number; onIdx: (i: number) => void; onDone: (picks: number[]) => void }) {
+function Questions({ questions, lang, idx, busy, error, onIdx, onDone }: { questions: Question[]; lang: Lang; idx: number; busy: boolean; error: string; onIdx: (i: number) => void; onDone: (picks: number[]) => void }) {
   const ui = UI[lang];
   const [picks, setPicks] = useState<number[]>([]);
   const q = questions[idx];
@@ -79,11 +81,12 @@ function Questions({ questions, lang, idx, onIdx, onDone }: { questions: Questio
       </div>
 
       <div className="sticky bottom-0 z-[4] -mx-5 mt-auto border-t border-sd-divider bg-sd-bg px-5 pt-2.5 pb-4 shadow-[0_-10px_20px_-14px_rgba(32,30,29,.25)] lg:mx-0 lg:px-10 lg:pt-3.5 lg:pb-[18px]">
+        {error && <p role="alert" className="m-0 mb-2 text-[13px] font-semibold text-sd-accent-700">{error}</p>}
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => go(picks)} className="sd-btn sd-btn-ghost h-[52px] px-3.5 text-[15px] text-sd-n-800">{ui.skip}</button>
+          <button type="button" onClick={() => go(picks)} disabled={busy} className="sd-btn sd-btn-ghost h-[52px] px-3.5 text-[15px] text-sd-n-800">{ui.skip}</button>
           <span className="flex-1" />
-          <button type="button" onClick={() => go(picks)} disabled={pick === undefined} className="sd-btn sd-btn-primary h-[52px] flex-1 max-w-[280px] justify-between rounded-[10px] px-[18px] text-base">
-            {last ? ui.finish : ui.next}<Icon name="arrowR" size={18} />
+          <button type="button" onClick={() => go(picks)} disabled={pick === undefined || busy} className="sd-btn sd-btn-primary h-[52px] flex-1 max-w-[280px] justify-between rounded-[10px] px-[18px] text-base">
+            {busy ? ui.grading : last ? ui.finish : ui.next}<Icon name="arrowR" size={18} />
           </button>
         </div>
       </div>
@@ -150,10 +153,23 @@ function Results({ questions, lang, picks, hasNext, children }: { questions: Que
   );
 }
 
+/** Sends an attempt to be graded. The answers come back with it, or null when it couldn't be reached. */
+async function grade(lesson: string, picks: number[]) {
+  const res = await fetch("/api/sd/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lesson, picks: Array.from(picks, (p) => p ?? null) }),
+  }).catch(() => null);
+  const out = await res?.json().catch(() => null);
+  return res?.ok && out?.review ? (out.review as Record<Lang, Question[]>) : null;
+}
+
 /**
  * The lesson check, in place of a plain "Prove it": an intro, five questions
  * with no feedback until the end, then the score and every answer explained.
- * 60% passes and unlocks the next lesson; a miss means rewatching first.
+ * 60% passes and unlocks the next lesson; a miss means rewatching first. The
+ * lesson reaches the browser without its answers: the server grades the
+ * attempt, keeps its own record, and sends the answers back for the results.
  */
 export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch }: {
   s: CourseState; act: Act; id: string; questions: Question[]; hasNext: boolean;
@@ -163,12 +179,21 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
   const p: LessonProgress = s.lessons[id] ?? {};
   const stage = s.checkStage;
   const tries = p.tries ?? 0;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   /** Opens the questions at the first one; the header counter and the locked step bar follow along. */
   const answer = () => act((q) => ({ ...q, checkStage: "q", checkIdx: 0, checkBusy: true }));
-  const finish = (picks: number[]) => act((q) => ({ ...submitCheck(q, id, questions, picks), checkStage: "result", checkBusy: false }));
+  const finish = async (picks: number[]) => {
+    setBusy(true);
+    setError("");
+    const review = await grade(id, picks);
+    setBusy(false);
+    if (!review) return setError(ui.noGrade);
+    act((q) => ({ ...updateLesson(submitCheck(q, id, review[q.lang], picks), id, { review }), checkStage: "result", checkBusy: false }));
+  };
 
   if (stage === "q") {
-    return <Questions questions={questions} lang={s.lang} idx={Math.min(s.checkIdx, questions.length - 1)} onIdx={(checkIdx) => act((q) => ({ ...q, checkIdx }))} onDone={finish} />;
+    return <Questions questions={questions} lang={s.lang} idx={Math.min(s.checkIdx, questions.length - 1)} busy={busy} error={error} onIdx={(checkIdx) => act((q) => ({ ...q, checkIdx }))} onDone={finish} />;
   }
 
   if (stage === "passed" && p.post) {
@@ -179,17 +204,17 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
           {ui.passedWith(p.check ?? checkPct(questions, p.post))}
         </span>
         <span className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => act((q) => ({ ...q, checkStage: "result" }))} className="sd-btn sd-btn-ghost h-10">{ui.see}</button>
+          {p.review && <button type="button" onClick={() => act((q) => ({ ...q, checkStage: "result" }))} className="sd-btn sd-btn-ghost h-10">{ui.see}</button>}
           <button type="button" onClick={onPass} className="sd-btn sd-btn-secondary h-10 gap-2">{ui.continue}<Icon name="arrowR" size={16} /></button>
         </span>
       </div>
     );
   }
 
-  if (stage === "result" && p.checkPicks) {
+  if (stage === "result" && p.checkPicks && p.review) {
     const ok = !!p.post && !p.failed;
     return (
-      <Results questions={questions} lang={s.lang} picks={p.checkPicks} hasNext={hasNext}>
+      <Results questions={p.review[s.lang]} lang={s.lang} picks={p.checkPicks} hasNext={hasNext}>
         {ok && <button type="button" onClick={() => { act((q) => ({ ...q, checkStage: "passed" })); onPass(); }} className="sd-btn h-[52px] w-full max-w-[320px] justify-between gap-3 rounded-[10px] bg-sd-accent-400 px-[18px] text-base text-sd-ink hover:bg-sd-accent-300">{ui.continue}<Icon name="arrowR" size={18} /></button>}
         {!ok && !p.rewatched && (
           <>
@@ -207,7 +232,7 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
     <div className="flex flex-col gap-3.5 rounded-xl bg-sd-surface p-[18px]">
       <h3 className="m-0 text-[28px] leading-none tracking-[-0.035em] text-balance lg:text-[38px]">{ui.title}</h3>
       <div className="flex flex-wrap gap-2">
-        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count}</span>
+        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count(assessmentParts(id, s.lang).total)}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.time}</span>
         <span className="sd-tag sd-tag-accent rounded-md">{ui.mark}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.answersEnd}</span>

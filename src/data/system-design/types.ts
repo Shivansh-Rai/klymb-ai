@@ -1,5 +1,5 @@
 /**
- * Shared shape of a "System Design in 21 Days" lesson. Both languages of a day
+ * Shared shape of a "System Design Essentials" lesson. Both languages of a day
  * must keep the same questions and choices in the same order: saved answers are
  * choice indexes, so switching language keeps a learner's progress.
  */
@@ -39,9 +39,32 @@ export interface BuildTask {
   given: string;
   /** Slot ids per row, top to bottom. */
   rows: string[][];
+  /** A heading for each row, when the rows are phases (e.g. "Before the sale"). Without one a row shows only its number. */
+  rowLabels?: string[];
   slots: Record<string, { role: string; answer: string }>;
   /** Boxes in the tray; `does` is shown as the hint after a wrong drop. A chip no slot answers is a decoy. */
   chips: { id: string; label: string; does: string }[];
+  done: string;
+}
+
+/** The parts a learner can place on the design canvas. */
+export type CanvasPart = "client" | "lb" | "server" | "cache" | "database" | "queue" | "worker" | "storage" | "cdn";
+
+/**
+ * "Draw it": a blank board. The learner places parts, connects them with
+ * arrows (from the one that asks to the one that answers), then compares with
+ * the model. A connection counts when any box of the first part points to any
+ * box of the second, so two servers both pointing to the database is fine.
+ */
+export interface CanvasTask {
+  title: string;
+  brief: string;
+  /** The parts offered, in tray order. Parts the model doesn't use are decoys. */
+  parts: CanvasPart[];
+  /** The model design. x and y place each box on the board, from 0 to 1. */
+  model: { nodes: { id: string; part: CanvasPart; x: number; y: number }[]; edges: [string, string][] };
+  /** Why each model connection is there, by "from>to" part pair, shown when it's missing. */
+  why: Record<string, string>;
   done: string;
 }
 
@@ -97,6 +120,7 @@ export interface DayCopy {
   post: Question[];
   estimates?: Estimate[];
   build?: BuildTask;
+  canvas?: CanvasTask;
   design?: DesignAttempt;
   followUps?: FollowUp[];
   interview: string[];

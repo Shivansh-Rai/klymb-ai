@@ -1,6 +1,9 @@
 import "server-only";
+import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
 import { inviteSenderName, readableBrandColor, type CompanyBrand } from "@/lib/company/brand";
 import { HIDE_MONEY } from "@/lib/site-status";
+
+const SD_LIVE = `${BUILT_LESSONS.length} of the ${MODULES.reduce((n, m) => n + m.lessons.length, 0)} lessons are out today`;
 
 /**
  * Transactional email through Brevo's HTTP API.
@@ -143,6 +146,38 @@ export function thankYouEmail(p: { name: string; trackName: string; amount: stri
         ${step(1, "Sign in with this email", "Use Continue with Google on the sign-in page, with the same email you paid with.")}
         ${step(2, "Day 1 opens as soon as you are enrolled", "One real workplace problem a day, about 90 to 120 minutes. Your course also works offline.")}
         ${step(3, "Finish all 30 days, get 100% back", `Submit every day, defend the four checkpoints and both interview-prep days. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
+      </table>`,
+    ],
+  });
+  return { subject, html, text };
+}
+
+/** The receipt and welcome for System Design. Early access, so it says what is out and what is coming. */
+export function sdReceiptEmail(p: { name: string; amount: string; paymentId: string; siteUrl: string; supportEmail: string }) {
+  const site = esc(p.siteUrl);
+  const subject = "You're in: System Design";
+  const text = [
+    `Hi ${p.name},`, "",
+    "Your System Design seat is confirmed. Your payment went through and every lesson that is out is open to you now.", "",
+    `Amount paid: ${p.amount}`, `Payment ID: ${p.paymentId}`, "",
+    "What happens next",
+    `1. Open ${p.siteUrl}/learn/system-design and sign in with the Google account you paid with.`,
+    `2. This is early access: ${SD_LIVE}, and the rest are added as they are ready, at no extra cost.`,
+    `3. Finish the whole course and we refund 100% of your fee. The conditions: ${p.siteUrl}/refund-policy`, "",
+    `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai",
+  ].join("\n");
+  const html = layout({
+    site, supportEmail: p.supportEmail,
+    preview: "Payment confirmed. Your System Design seat is ready.",
+    eyebrow: "Payment confirmed",
+    title: `You're in, ${esc(p.name)}.`,
+    intro: `Your <strong style="color:#fff">System Design</strong> seat is confirmed.`,
+    sections: [
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.line}">${row("Amount paid", p.amount)}${row("Payment ID", p.paymentId)}</table>${button(`${site}/learn/system-design`, "Open the course")}`,
+      `${sectionTitle("What happens next")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${step(1, "Sign in with the same Google account", "The account you paid with is the one that holds your seat.")}
+        ${step(2, "This is early access", `${SD_LIVE[0].toUpperCase()}${SD_LIVE.slice(1)}. The rest are added as they are ready, at no extra cost.`)}
+        ${step(3, "Finish the course, get 100% back", `Pass every lesson's check and the final assessment. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
       </table>`,
     ],
   });

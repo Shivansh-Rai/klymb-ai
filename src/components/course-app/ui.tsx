@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
-import { fmt, isLocked, isSoon, lesson, sec, type CourseState } from "@/lib/course-app";
+import { fmt, isLocked, isPaywalled, isSoon, lesson, sec, type CourseState } from "@/lib/course-app";
 
 /** Animation delay for the i-th item of a staggered list. */
 export const stagger = (i: number, step: number, base: number): CSSProperties => ({ animationDelay: `${base + i * step}ms` });
@@ -106,7 +106,7 @@ export function lessonView(s: CourseState, id: string) {
   const done = s.done.includes(id);
   const cur = id === s.cur;
   const soon = isSoon(id);
-  const locked = !soon && isLocked(s, id);
+  const locked = !soon && (isPaywalled(id) || isLocked(s, id));
   const p = s.lessons[id];
   return {
     soon,
@@ -131,10 +131,11 @@ export function LessonMark({ done, cur, locked }: { done: boolean; cur: boolean;
   );
 }
 
-export function Duration({ v }: { v: ReturnType<typeof lessonView> }) {
+/** A lesson row's trailing info: length (or time left) and score. `time={false}` leaves the length out; "Soon" still shows. */
+export function Duration({ v, time = true }: { v: ReturnType<typeof lessonView>; time?: boolean }) {
   return (
     <span className="flex items-center gap-1 text-xs text-sd-n-700">
-      {v.dur}
+      {(time || v.soon) && v.dur}
       {v.score !== undefined && (
         <span className={clsx("rounded-md px-1.5 py-px font-bold", v.failed ? "bg-sd-accent-100 text-sd-accent-700" : "bg-sd-n-300 text-sd-ink")} title={v.failed ? "Not passed yet" : "Lesson assessment score"}>{v.score}%</span>
       )}

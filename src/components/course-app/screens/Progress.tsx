@@ -173,7 +173,7 @@ export function Progress({ s }: { s: CourseState }) {
         </div>
         {shareBadge && (
           <div className="mt-5">
-            <ShareAchievement key={shareBadge.name} variant="poster" posterIcon={<Icon name={shareBadge.icon as IconName} size={40} />} badge={shareBadge} course="System Design in 21 Days" courseUrl={`${site.url}/learn/system-design`} initialName={user?.name ?? ""} />
+            <ShareAchievement key={shareBadge.name} variant="poster" posterIcon={<Icon name={shareBadge.icon as IconName} size={40} />} badge={shareBadge} course="System Design Essentials" courseUrl={`${site.url}/learn/system-design`} initialName={user?.name ?? ""} />
           </div>
         )}
       </div>

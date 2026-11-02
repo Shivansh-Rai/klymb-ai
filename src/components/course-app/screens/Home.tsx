@@ -6,6 +6,7 @@ import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, less
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
+import { OverviewVideo } from "../Overlays";
 import { Bar, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 
@@ -52,6 +53,7 @@ function kamranSays(s: CourseState, first: string | null) {
   if (isSoon(s.cur)) return `All released days done. ${name} is coming soon.`;
   const p = s.lessons[s.cur];
   const day = dayOf(s.cur);
+  if (!day) return `${hi}${name} is in the full course.`;
   if (!s.done.length && !p) return `Hi${first ? ` ${first}` : ""}, I’m Kamran. ${name} takes about ${day.minutes} minutes.`;
   if (!p) return `${hi}${name} takes about ${day.minutes} minutes.`;
   const next = lessonSteps(s, s.cur, day).find((x) => !x.done);
@@ -68,7 +70,7 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
   const week = thisWeek(s);
   const hello = greeting();
   const path = [
-    { num: "01", title: "Lessons", sub: "Day 0 + 21 days", value: `${doneCount}/${LESSON_COUNT}`, go: () => act((p) => ({ ...p, screen: "course", tab: "course" })) },
+    { num: "01", title: "Lessons", sub: "21 days", value: `${doneCount}/${LESSON_COUNT}`, go: () => act((p) => ({ ...p, screen: "course", tab: "course" })) },
     {
       num: "02", title: "Lesson checks", sub: `${Math.round(PASS_MARK * 100)}% to pass`, value: checkAverage(s),
       go: () => act((p) => openLesson(p, firstOpenLesson(p))),
@@ -194,6 +196,8 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
               </button>
             ))}
           </div>
+          <h6 className="sd-h6 mt-6 mb-2">Course intro</h6>
+          <OverviewVideo />
         </section>
       </div>
     </div>

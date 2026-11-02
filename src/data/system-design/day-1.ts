@@ -213,6 +213,7 @@ const en: DayCopy = {
     intro: "Drag each move to the moment it belongs to. You can also tap a move, then tap a slot.",
     given: "Big Billion Day · 12:00 AM",
     rows: [["forecast", "prescale", "loadtest"], ["throttle", "queue"], ["oos", "fallback"]],
+    rowLabels: ["Before the sale", "At 12:00 AM", "When it breaks"],
     slots: {
       forecast: { role: "Weeks before: how big will the peak be?", answer: "forecast" },
       prescale: { role: "Days before: servers up and warm", answer: "prescale" },
@@ -550,6 +551,7 @@ const hi: DayCopy = {
     intro: "Har move ko uske sahi waqt pe drag karo. Ya move tap karo, phir slot tap karo.",
     given: "Big Billion Day · 12:00 AM",
     rows: [["forecast", "prescale", "loadtest"], ["throttle", "queue"], ["oos", "fallback"]],
+    rowLabels: ["Before the sale", "At 12:00 AM", "When it breaks"],
     slots: {
       forecast: { role: "Hafton pehle: peak kitna bada hoga?", answer: "forecast" },
       prescale: { role: "Din pehle: servers taiyaar aur warm", answer: "prescale" },

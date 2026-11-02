@@ -1,16 +1,15 @@
 import {
-  LESSON_DAYS,
+  BUILT_LESSONS,
   MODULES,
   NOTIFICATIONS,
   QUESTIONS,
-  QUICK_CHECKS,
-  TRANSCRIPTS,
   TIMED_SECONDS,
   type Notif,
   type Question,
+  type QuickCheck,
 } from "@/data/system-design/course-app";
-import { SUBTITLES_EN } from "@/data/system-design/subtitles-en";
 import type { Day, Lang, Question as ChoiceQuestion } from "@/data/system-design/types";
+import type { Board } from "@/lib/canvas";
 
 /**
  * State and transitions for the System Design course app. Everything here is
@@ -37,6 +36,8 @@ export interface LessonProgress {
   /** Estimate answers, as typed. */
   est?: number[];
   built?: number;
+  /** "Draw it": the learner's own board, saved as they go, and its result once checked. */
+  board?: Board; drawn?: { score: number; of: number };
   /** The design attempt, and the self-check ticks after the walkthrough. */
   design?: string; checks?: boolean[];
   follow?: boolean[];
@@ -47,6 +48,8 @@ export interface LessonProgress {
    * `failed`, and a retake opens once the video is watched again (`rewatched`).
    */
   check?: number; checkPicks?: number[]; tries?: number; failed?: boolean; rewatched?: boolean;
+  /** The answers and why, from the server once an attempt is graded. The lesson itself doesn't carry them. */
+  review?: Record<Lang, ChoiceQuestion[]>;
   /** Seconds of video actually played since the last miss; skipping ahead does not count. */
   rewatchSec?: number;
 }
@@ -135,13 +138,15 @@ export interface CourseState {
   /** The streak pop-up is open; `popDay` is the last day it was shown (once a day, on the first pass). */
   streakPop: boolean;
   popDay: string;
+  /** A lesson this viewer hasn't bought was asked for: the offer is showing. */
+  paywall: boolean;
 }
 
 /** How many of `picks` landed on the best choice. */
 export const score = (questions: ChoiceQuestion[], picks: number[]) =>
   picks.filter((p, k) => questions[k]?.choices[p]?.best).length;
 
-export type StepKey = "watch" | "reveal" | "prove" | "estimate" | "build" | "design" | "follow" | "done";
+export type StepKey = "watch" | "reveal" | "prove" | "estimate" | "build" | "draw" | "design" | "follow" | "done";
 
 export type CheckStage = "intro" | "q" | "result" | "passed";
 
@@ -152,22 +157,35 @@ export function checkStageFor(p?: LessonProgress): CheckStage {
   return "intro";
 }
 
-/** Everything in the day's assessment is numbered out of 14: the check, the estimates, the build, the design, the follow-ups. */
-export const ASSESSMENT_TOTAL = 14;
+/**
+ * The day's assessment is numbered as one run: the check's questions, then the
+ * estimates, the build, the drawing, the design and the follow-ups, as many as the day has.
+ * `first` is where each part's numbering starts.
+ */
+export function assessmentParts(id: string, lang: Lang = "en") {
+  const c = dayOf(id)?.copy[lang];
+  const sizes = { prove: c?.post.length ?? 0, estimate: c?.estimates?.length ?? 0, build: c?.build ? 1 : 0, draw: c?.canvas ? 1 : 0, design: c?.design ? 1 : 0, follow: c?.followUps?.length ?? 0 };
+  const order = ["prove", "estimate", "build", "draw", "design", "follow"] as const;
+  const first = {} as Record<(typeof order)[number], number>;
+  let n = 1;
+  for (const k of order) { first[k] = n; n += sizes[k]; }
+  return { total: n - 1, first, sizes };
+}
 
 /**
- * The big "N / 14" in the assessment header. The check's questions are 1–5,
- * estimates 6–8, build 9, design 10, follow-ups 11–14. Zero while the part is
- * done, on the intro card, and on the results: no counter to show there.
+ * The big "N / total" in the assessment header. Zero while the part is done,
+ * on the intro card, and on the results: no counter to show there.
  */
 export function assessmentStep(s: CourseState, id: string): number {
   const p: LessonProgress = s.lessons[id] ?? {};
+  const { first, sizes } = assessmentParts(id, s.lang);
   switch (s.stage) {
-    case "prove": return s.checkStage === "q" ? s.checkIdx + 1 : 0;
-    case "estimate": return p.est ? 0 : 6 + s.estIdx;
-    case "build": return p.built === undefined ? 9 : 0;
-    case "design": return p.design ? 0 : 10;
-    case "follow": return p.follow ? 0 : 11 + Math.min(s.fuIdx, 3);
+    case "prove": return s.checkStage === "q" ? first.prove + s.checkIdx : 0;
+    case "estimate": return p.est ? 0 : first.estimate + s.estIdx;
+    case "build": return p.built === undefined ? first.build : 0;
+    case "draw": return p.drawn ? 0 : first.draw;
+    case "design": return p.design ? 0 : first.design;
+    case "follow": return p.follow ? 0 : first.follow + Math.min(s.fuIdx, Math.max(sizes.follow - 1, 0));
     default: return 0;
   }
 }
@@ -184,6 +202,7 @@ export function lessonSteps(s: CourseState, id: string, day: Day) {
   const add = (key: StepKey, done: boolean) => steps.push({ key, done, open: steps[steps.length - 1].done });
   if (c.estimates?.length) add("estimate", !!p.est);
   if (c.build) add("build", p.built !== undefined);
+  if (c.canvas) add("draw", !!p.drawn);
   if (c.design) add("design", !!p.design);
   if (c.followUps?.length) add("follow", !!p.follow);
   steps.push({ key: "done", done: s.done.includes(id), open: flowDone(s, id) });
@@ -246,11 +265,24 @@ export const allNotes = (s: CourseState) => Object.values(s.notes).flat();
 
 /** The mini player needs a video that keeps playing off the lesson screen; lessons stop when you leave for now. */
 export const MINI_PLAYER = false;
-/** The lesson's full content, or undefined while it's coming soon. */
-export const dayOf = (id: string) => LESSON_DAYS[id];
-export const isSoon = (id: string) => !LESSON_DAYS[id];
-export const hasQuickCheck = (id: string) => id in QUICK_CHECKS;
-export const lessonDay = (id: string) => { const d = dayOf(id); return d ? `Day ${d.day}` : `Day ${ALL_IDS.indexOf(id)}`; };
+/** One lesson as the server hands it to the app. */
+export interface LessonContent { day: Day; subtitles: Record<SubLang, [number, string][]>; quickCheck?: QuickCheck }
+
+let content: Record<string, LessonContent> = {};
+/**
+ * The lessons this viewer may open, from the server, set once on mount in the
+ * browser. Paid lessons aren't in the bundle, so this is the only way they arrive.
+ */
+export const setLessons = (lessons: Record<string, LessonContent>) => { content = lessons; };
+
+/** The lesson's full content, or undefined while it's coming soon or unpaid. */
+export const dayOf = (id: string) => content[id]?.day;
+export const isSoon = (id: string) => !BUILT_LESSONS.includes(id);
+/** Out, but this viewer hasn't bought it. */
+export const isPaywalled = (id: string) => !isSoon(id) && !content[id];
+export const quickCheckOf = (id: string) => content[id]?.quickCheck;
+export const hasQuickCheck = (id: string) => !!quickCheckOf(id);
+export const lessonDay = (id: string) => { const d = dayOf(id); return d ? `Day ${d.day}` : `Day ${ALL_IDS.indexOf(id) + 1}`; };
 
 /** Every step of the lesson is finished: video, learn, prove it, build (if any), follow-ups (if any). */
 export function flowDone(s: CourseState, id: string) {
@@ -258,7 +290,7 @@ export function flowDone(s: CourseState, id: string) {
   if (!d) return false;
   const p = s.lessons[id] ?? {};
   const c = d.copy[s.lang];
-  return !!(p.watched && p.post && (!c.estimates?.length || p.est) && (!c.build || p.built !== undefined) && (!c.design || p.design) && (!c.followUps?.length || p.follow));
+  return !!(p.watched && p.post && (!c.estimates?.length || p.est) && (!c.build || p.built !== undefined) && (!c.canvas || p.drawn) && (!c.design || p.design) && (!c.followUps?.length || p.follow));
 }
 
 /** Saves a lesson step and counts today towards the streak. */
@@ -316,7 +348,7 @@ export function isAnswered(q: Question, a: Answer | undefined) {
 
 const toast = (msg: string, now: number, ms = 2600) => ({ toast: msg, toastUntil: now + ms });
 
-/** A first visit: nothing done, no baseline yet, the course opens on Day 0. */
+/** A first visit: nothing done, no baseline yet, the course opens on Day 1. */
 export function defaultState(now = Date.now()): CourseState {
   return {
     screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800,
@@ -330,7 +362,7 @@ export function defaultState(now = Date.now()): CourseState {
     goal: 15, remind: "19:00", autoplay: false, quality: "auto", wifiOnly: true, streakRem: true, replyNotif: true,
     todaySec: 0, today: localDate(new Date(now)),
     toast: null, toastUntil: 0,
-    commitment: null, streakPop: false, popDay: "",
+    commitment: null, streakPop: false, popDay: "", paywall: false,
     lessons: {}, lang: "en", subs: false, subLang: "en", subSize: "m", audio: "Hinglish", volume: 1, muted: false,
     toured: false, stage: "watch", checkBusy: false, checkStage: "intro", checkIdx: 0, estIdx: 0, fuIdx: 0, activeDays: [],
   };
@@ -349,24 +381,24 @@ export type StartScreen = (typeof START_SCREENS)[number];
 /** A preview state for one design frame. `q` picks the question for "q"; `seedPost` adds a finished post-assessment. */
 export function previewState(start: StartScreen, opts: { q?: number; seedPost?: boolean } = {}, now = Date.now()): CourseState {
   const s: CourseState = {
-    ...defaultState(now), screen: "home", onboarded: true, toured: true, done: ["0-0"], cur: "1-0",
+    ...defaultState(now), screen: "home", onboarded: true, toured: true, done: ["0-0"], cur: "0-1",
     lessons: { "0-0": { watched: true, read: true, post: [0, 0, 0, 0, 1], check: 80, checkPicks: [0, 0, 0, 0, 1], tries: 1 } },
     commitment: { name: "Priya Sharma", date: localDate(new Date(now)) },
   };
   /** Day 1 opened past the video, with the check in some state. These frames are about the check, so the column shows it. */
   const atCheck = (p: Partial<LessonProgress>): CourseState => ({
-    ...s, screen: "player", visited: true, stage: "prove", checkStage: checkStageFor(p), lessons: { ...s.lessons, "1-0": { watched: true, read: true, ...p } },
+    ...s, screen: "player", visited: true, stage: "prove", checkStage: checkStageFor(p), lessons: { ...s.lessons, "0-1": { watched: true, read: true, ...p } },
   });
   /** Day 1 past the assessment, so the practice stages have something to stand on. */
   const passed: LessonProgress = { watched: true, read: true, post: [0, 0, 0, 0, 1], check: 80, checkPicks: [0, 0, 0, 0, 1], tries: 1, est: [260, 30000, 250] };
   const atStage = (stage: StepKey, p: Partial<LessonProgress> = {}): CourseState => ({
-    ...s, screen: "player", visited: true, stage, lessons: { ...s.lessons, "1-0": { ...passed, ...p } },
+    ...s, screen: "player", visited: true, stage, lessons: { ...s.lessons, "0-1": { ...passed, ...p } },
   });
   if (opts.seedPost) s.post = [1, 1, 1, 1, 0, 1];
   switch (start) {
     case "course": return { ...s, screen: "course", tab: "course", openMod: lesson(s.cur).mi };
     case "progress": return { ...s, screen: "progress", tab: "progress" };
-    case "player": return { ...s, screen: "player", visited: true, notes: { "1-0": [{ t: 52, text: "Predictable = known date. Pre-scale weeks ahead." }, { t: 131, text: "Auto-scaling takes minutes; spikes take seconds" }] } };
+    case "player": return { ...s, screen: "player", visited: true, notes: { "0-1": [{ t: 52, text: "API = the agreed way to ask the server" }, { t: 131, text: "No response is not proof the save failed" }] } };
     case "post": return { ...s, screen: "quiz", quiz: { kind: "post", stage: "intro", idx: 0, answers: {} } };
     case "commit": return { ...s, screen: "commit", commitment: null };
     case "commitdone": return { ...s, screen: "commit" };
@@ -389,29 +421,29 @@ export function previewState(start: StartScreen, opts: { q?: number; seedPost?: 
     case "profile": return { ...s, screen: "profile", tab: "profile" };
     case "notifs": return { ...s, screen: "notifs" };
     case "notifsempty": return { ...s, screen: "notifs", notifs: [] };
-    case "recap": return { ...s, screen: "recap", recapMod: 0, done: ["0-0"], cur: "1-0", t: 0, notes: { "0-0": [{ t: 40, text: "Every app = boxes talking to each other" }] } };
+    case "recap": return { ...s, screen: "recap", recapMod: 0, done: ["0-0"], cur: "0-1", t: 0, notes: { "0-0": [{ t: 40, text: "Checking stock is not claiming it" }] } };
     case "offline": return { ...s, screen: "course", tab: "course", offline: true };
-    case "videoerr": return { ...s, screen: "player", visited: true, t: 96, vidErr: true, lessons: { ...s.lessons, "1-0": { watched: true } } };
-    case "vidoffline": return { ...s, screen: "player", visited: true, t: 96, offline: true, lessons: { ...s.lessons, "1-0": { watched: true } } };
+    case "videoerr": return { ...s, screen: "player", visited: true, t: 96, vidErr: true, lessons: { ...s.lessons, "0-1": { watched: true } } };
+    case "vidoffline": return { ...s, screen: "player", visited: true, t: 96, offline: true, lessons: { ...s.lessons, "0-1": { watched: true } } };
     case "mini": return { ...s, visited: true, playing: true };
     case "tour1": return { ...s, screen: "player", visited: true, toured: false, tourStep: 0 };
     case "tour2": return { ...s, screen: "player", visited: true, toured: false, tourStep: 1 };
     case "tour3": return { ...s, screen: "player", visited: true, toured: false, tourStep: 2 };
     case "tour4": return { ...s, screen: "player", visited: true, toured: false, tourStep: 3 };
     case "tour5": return { ...s, screen: "player", visited: true, toured: false, tourStep: 4 };
-    case "playing": return { ...s, screen: "player", visited: true, t: 96, playing: true, subs: true, lessons: { ...s.lessons, "1-0": { watched: true } } };
-    case "paused": return { ...s, screen: "player", visited: true, t: 96, subs: true, lessons: { ...s.lessons, "1-0": { watched: true } } };
+    case "playing": return { ...s, screen: "player", visited: true, t: 96, playing: true, subs: true, lessons: { ...s.lessons, "0-1": { watched: true } } };
+    case "paused": return { ...s, screen: "player", visited: true, t: 96, subs: true, lessons: { ...s.lessons, "0-1": { watched: true } } };
     case "tabqna": return { ...s, screen: "player", visited: true, ptab: "qna" };
     case "tabnotes": return {
-      ...s, screen: "player", visited: true, ptab: "notes", t: 96, draft: "Throttle below the tested limit",
-      lessons: { ...s.lessons, "1-0": { watched: true } },
-      notes: { "1-0": [{ t: 52, text: "Predictable = known date. Pre-scale weeks ahead." }, { t: 131, text: "Auto-scaling takes minutes; spikes take seconds" }] },
+      ...s, screen: "player", visited: true, ptab: "notes", t: 96, draft: "Server checks: who, allowed, valid",
+      lessons: { ...s.lessons, "0-1": { watched: true } },
+      notes: { "0-1": [{ t: 52, text: "API = the agreed way to ask the server" }, { t: 131, text: "No response is not proof the save failed" }] },
     };
     case "notesempty": return { ...s, screen: "player", visited: true, ptab: "notes", notes: {} };
     case "exit": return { ...s, screen: "quiz", quiz: { kind: "post", stage: "q", idx: 2, answers: { 0: 0, 1: [0], 2: 1 } }, confirmExit: true };
-    case "qc": return { ...s, screen: "player", visited: true, t: quickCheckAt("1-0"), qcOpen: true };
+    case "qc": return { ...s, screen: "player", visited: true, t: quickCheckAt("0-1"), qcOpen: true };
     case "results": return { ...s, screen: "results", post: s.post ?? [1, 1, 1, 1, 0, 1], lastKind: "post" };
-    case "learn": return { ...s, screen: "player", visited: true, stage: "reveal", t: 190, ended: true, lessons: { ...s.lessons, "1-0": { watched: true } } };
+    case "learn": return { ...s, screen: "player", visited: true, stage: "reveal", t: 190, ended: true, lessons: { ...s.lessons, "0-1": { watched: true } } };
     case "checkintro": return atCheck({});
     case "checkq": return { ...atCheck({}), checkStage: "q", checkIdx: 1, checkBusy: true };
     case "checkpass": return { ...atCheck({ check: 80, post: [0, 0, 0, 1, 0], checkPicks: [0, 0, 0, 1, 0], tries: 1 }), checkStage: "result" };
@@ -454,6 +486,7 @@ export function tick(s: CourseState, now = Date.now()): CourseState {
 
 export function openLesson(s: CourseState, id: string, now = Date.now(), force = false): CourseState {
   if (isSoon(id)) return { ...s, ...toast(`${lesson(id).title.split(":")[0]} is coming soon`, now) };
+  if (isPaywalled(id)) return { ...s, playing: false, paywall: true };
   if (!force && isLocked(s, id)) return { ...s, ...toast("Pass the previous lesson’s assessment to unlock this one", now, 2400) };
   const same = id === s.cur;
   return {
@@ -475,6 +508,7 @@ export function completeNext(s: CourseState, auto: boolean, now = Date.now()): C
     return { ...s, ...reset, done, cur: nextId ?? s.cur, t: 0, playing: false, screen: "recap", recapMod: cmi, openMod: nextId ? lesson(nextId).mi : cmi };
   }
   if (nextId && isSoon(nextId)) return { ...s, ...reset, ...toast(`Done! ${lesson(nextId).title.split(":")[0]} is coming soon.`, now), done, playing: false, screen: "home", tab: "home" };
+  if (nextId && isPaywalled(nextId)) return { ...s, ...reset, done, cur: nextId, t: 0, playing: false, screen: "home", tab: "home", paywall: true };
   if (nextId) return { ...s, ...reset, ...t, done, cur: nextId, t: 0, playing: auto, openMod: lesson(nextId).mi };
   return { ...s, ...reset, ...t, done };
 }
@@ -596,6 +630,13 @@ export function fromStored(raw: unknown, now = Date.now()): CourseState {
   return s;
 }
 
+/** Saved state with its lesson progress removed: the settings and the signed commitment, for when the lessons behind the ids have changed. */
+export function settingsOnly(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const progress = new Set(["cur", "t", "notes", "done", "pre", "post", "qcDone", "lessons", "openMod"]);
+  return Object.fromEntries(Object.entries(raw).filter(([k]) => !progress.has(k)));
+}
+
 /** A Day page's saved progress. `pre` came from the opening quiz those pages had, which this course no longer asks. */
 type LegacyProgress = Partial<LessonProgress> & { pre?: number[] };
 
@@ -615,10 +656,21 @@ export function migrateLegacy(s: CourseState, legacy: { day0?: LegacyProgress | 
 /** `?lesson=<id>`: open straight into that lesson, skipping the splash and intro (links from Instagram land here). */
 export function deepLink(s: CourseState, id: string | null, now = Date.now()): CourseState {
   if (!id || !ALL_IDS.includes(id) || isSoon(id)) return s;
-  // Back from "Continue with Google" on the welcome, or a first visit: the commitment comes before Day 0.
+  if (isPaywalled(id)) return { ...s, onboarded: true, screen: "course", tab: "course", paywall: true };
+  // Back from "Continue with Google" on the welcome, or a first visit: the commitment comes before Day 1.
   if (id === "0-0" && !s.commitment && s.done.length === 0) return { ...s, onboarded: true, tab: "course", cur: id, screen: "commit" };
   // Shared links open their lesson even when it's still locked here.
   return openLesson({ ...s, onboarded: true, tab: "course" }, id, now, true);
+}
+
+/** A seat holder this device hasn't seen: no welcome to sit through, just the promises, once. */
+export function startEnrolled(s: CourseState): CourseState {
+  return { ...s, onboarded: true, screen: s.commitment ? "home" : "commit", tab: "home" };
+}
+
+/** Back from a successful payment. */
+export function afterPayment(s: CourseState, now = Date.now()): CourseState {
+  return { ...startEnrolled(s), ...toast("Payment received. Your seat is confirmed.", now, 4000) };
 }
 
 /** Clamped to the allowed range, in steps of 0.05 so the label never shows float noise. */
@@ -638,7 +690,7 @@ export const speedLabel = (v: number) => `${Number(v.toFixed(2))}×`;
 
 /** Subtitle lines for a lesson in a language, or none. Hinglish are the video's own captions. */
 export function subtitleLines(id: string, lang: SubLang): [number, string][] {
-  return (lang === "en" ? SUBTITLES_EN[id] : TRANSCRIPTS[id]) ?? [];
+  return content[id]?.subtitles[lang] ?? [];
 }
 
 /** Languages a lesson has subtitles in. */

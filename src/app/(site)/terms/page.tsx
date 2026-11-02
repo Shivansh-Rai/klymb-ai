@@ -2,7 +2,7 @@ import { HIDE_MONEY } from "@/lib/site-status";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Facts, LegalPage, Section } from "@/components/legal/LegalPage";
-import { entity, grievance, entityRows } from "@/data/legal";
+import { entity, grievance, entityRows, sdRefund } from "@/data/legal";
 import { allFree, priceFrom, priceTo } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 
@@ -65,6 +65,14 @@ export default function TermsPage() {
         </p>
       </Section>
       )}
+
+      <Section n="5A." title="System Design" plain="One fee for the whole course, sold before every lesson is out. Finish all of it and you get the fee back.">
+        <p>
+          {sdRefund.earlyAccess} The price is shown before you pay, and you sign in with Google first: the account you pay
+          with is the one that holds your seat, and a seat is for one person. The conditions for getting your fee back are in
+          the <Link href="/refund-policy">Refund Policy</Link>, which forms part of these terms.
+        </p>
+      </Section>
 
       <Section n="6." title="What you submit" plain="Your work stays yours. We need permission to store, show and review it.">
         <p>

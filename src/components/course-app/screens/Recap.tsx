@@ -1,7 +1,7 @@
 "use client";
 
 import { MODULES } from "@/data/system-design/course-app";
-import { dayOf, moduleIds, moduleMinutes, openLesson, pad, startQuiz, type CourseState } from "@/lib/course-app";
+import { dayOf, isPaywalled, moduleIds, moduleMinutes, openLesson, pad, startQuiz, type CourseState } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { BackButton, Stats, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
@@ -23,6 +23,7 @@ function kamranSays(rm: number, first: string | null) {
   const nextDay = dayOf(`${rm + 1}-0`);
   const next = MODULES[rm + 1];
   if (!next) return `${hi} That’s the whole course. Take the post-assessment and see how far you’ve come.`;
+  if (isPaywalled(`${rm + 1}-0`)) return `${hi} You finished ${MODULES[rm].title}. ${next.title} is in the full course.`;
   if (!nextDay) return `${hi} You finished ${MODULES[rm].title}. ${next.title} is coming soon, I’ll keep it ready.`;
   return `${hi} You finished ${MODULES[rm].title}. Next up: Day ${nextDay.day}, ${nextDay.app}. About ${nextDay.minutes} minutes.`;
 }

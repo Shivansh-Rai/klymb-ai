@@ -4,6 +4,7 @@
  * without a database.
  */
 import type { Day, Question } from "@/data/system-design/types";
+import { lessonDay } from "@/lib/course-app";
 
 export interface SdEventRow {
   created_at: string;
@@ -41,13 +42,14 @@ export const STAGES: { key: string; label: string; hit: (e: SdEventRow) => boole
   { key: "post", label: "Prove it", hit: (e) => e.event === "step_done" && e.step === "post" },
   { key: "est", label: "Estimate", hit: (e) => e.event === "step_done" && e.step === "est" },
   { key: "built", label: "Build it", hit: (e) => e.event === "step_done" && e.step === "built" },
+  { key: "drawn", label: "Draw it", hit: (e) => e.event === "step_done" && e.step === "drawn" },
   { key: "design", label: "Design it", hit: (e) => e.event === "step_done" && e.step === "design" },
   { key: "follow", label: "Follow-ups", hit: (e) => e.event === "step_done" && e.step === "follow" },
   { key: "complete", label: "Completed the day", hit: (e) => e.event === "day_complete" },
 ];
 
 const STEP_LABEL: Record<string, string> = {
-  call: "Your call", watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", design: "Design it", follow: "Follow-ups", done: "Done",
+  call: "Your call", watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done",
 };
 
 const count = <T,>(xs: T[], key: (x: T) => string | null | undefined) => {
@@ -75,6 +77,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     const funnel = STAGES
       .filter((st) => st.key !== "est" || day.copy.en.estimates?.length)
       .filter((st) => st.key !== "built" || day.copy.en.build)
+      .filter((st) => st.key !== "drawn" || day.copy.en.canvas)
       .filter((st) => st.key !== "design" || day.copy.en.design)
       .filter((st) => st.key !== "follow" || day.copy.en.followUps?.length)
       .map((st) => ({ label: st.label, value: new Set(evs.filter(st.hit).map((e) => e.anon_id)).size }));
@@ -141,7 +144,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     return {
       anon, email: emailOf.get(anon) ?? null, first: mine[0].created_at, last: last.created_at,
       events: mine.length, stepsDone: steps.size, done: done.filter(Boolean) as string[],
-      where: lastStep ? `${lastStep.lesson === "0-0" ? "Day 0" : lastStep.lesson === "1-0" ? "Day 1" : lastStep.lesson} · ${STEP_LABEL[lastStep.step ?? ""] ?? lastStep.step}` : "Browsing",
+      where: lastStep ? `${lastStep.lesson && /^\d+-\d+$/.test(lastStep.lesson) ? lessonDay(lastStep.lesson) : lastStep.lesson} · ${STEP_LABEL[lastStep.step ?? ""] ?? lastStep.step}` : "Browsing",
       device: last.device, lang: last.lang,
       minutes: Math.round((mine.filter((e) => e.event === "ping").length * PING_SECONDS) / 60),
     };
@@ -160,7 +163,7 @@ export function summarise(events: SdEventRow[], feedback: SdFeedbackRow[], days:
     lang: count([...lastPerAnon.values()], (e) => (e.lang === "hi" ? "Hinglish" : e.lang === "en" ? "English" : null)),
     device: count([...lastPerAnon.values()], (e) => (e.device === "phone" ? "Phone" : e.device === "desktop" ? "Desktop" : null)),
     screens: count(events.filter((e) => e.event === "screen"), (e) => String(e.props?.screen ?? "")),
-    welcome: count(events.filter((e) => e.event === "welcome"), (e) => (e.props?.choice === "day0" ? "Started Day 0" : "Took the baseline first")),
+    welcome: count(events.filter((e) => e.event === "welcome"), (e) => (e.props?.choice === "day0" ? "Started Day 1" : "Took the baseline first")),
     tour: count(events.filter((e) => e.event === "tour"), (e) => (e.props?.action === "finished" ? "Finished the tour" : `Skipped at stop ${e.props?.at}`)),
     subsOff: new Set(events.filter((e) => e.event === "subs" && e.props?.on === false).map((e) => e.anon_id)).size,
     shares: events.filter((e) => e.event === "share").length,

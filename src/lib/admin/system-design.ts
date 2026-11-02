@@ -1,5 +1,5 @@
 import "server-only";
-import { LESSON_DAYS } from "@/data/system-design/course-app";
+import { LESSON_DAYS } from "@/data/system-design/lessons";
 import { getAdmin } from "@/lib/admin/auth";
 import { db } from "@/lib/db/client";
 import { summarise, type SdEventRow, type SdFeedbackRow, type SdSummary } from "@/lib/sd-summary";

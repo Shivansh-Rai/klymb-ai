@@ -4,7 +4,8 @@ import { grievance } from "@/data/legal";
 import { getTrack } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 import { db } from "@/lib/db/client";
-import { sendMail, thankYouEmail } from "@/lib/mail";
+import { sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
+import { SD_COURSE } from "@/lib/sd-offer";
 
 /**
  * Sends the thank-you email for one paid order, at most once.
@@ -27,20 +28,22 @@ export async function sendReceiptOnce(orderId: string) {
   `;
   if (!pay) return;
 
-  const { data: reg } = await sql.row<{ name: string }>`
-    select name from course.registrations
-     where email = ${pay.email} and cohort_start = ${pay.cohort_start}
-  `;
+  const sd = pay.track === SD_COURSE;
+  const { data: reg } = sd
+    ? await sql.row<{ name: string }>`select name from course.sd_preregistrations where email = ${pay.email}`
+    : await sql.row<{ name: string }>`
+        select name from course.registrations
+         where email = ${pay.email} and cohort_start = ${pay.cohort_start}
+      `;
 
-  const name = reg?.name?.split(" ")[0] || "there";
-  const mail = thankYouEmail({
-    name,
-    trackName: getTrack(pay.track)?.name ?? pay.track,
+  const details = {
+    name: reg?.name?.split(" ")[0] || "there",
     amount: formatINR(pay.amount / 100),
     paymentId: pay.razorpay_payment_id ?? orderId,
     siteUrl: site.url,
     supportEmail: grievance.email,
-  });
+  };
+  const mail = sd ? sdReceiptEmail(details) : thankYouEmail({ ...details, trackName: getTrack(pay.track)?.name ?? pay.track });
 
   const sent = await sendMail({ to: { email: pay.email, name: reg?.name ?? undefined }, ...mail });
   if (!sent.ok) {

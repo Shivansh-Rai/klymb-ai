@@ -75,6 +75,8 @@ development only, for React Refresh.
 | `/tracks/[slug]` | Track detail page (same layout for all five tracks) |
 | `/program` | Program structure and pricing |
 | `/register?track=slug` | Registration form, optionally pre-selecting a track |
+| `/system-design` | System Design offer: the price and the claim form. Claiming signs in with Google, then opens Razorpay |
+| `/learn/system-design` | System Design course. Day 0 is free; everything else needs a seat |
 | `/dashboard?track=slug` | Learner progress dashboard (demo data) |
 | `/daily-challenge?track=slug&day=n` | Daily problem view (demo) |
 | `/weekly-assessment?track=slug&week=n` | Weekly assessment view (demo) |
@@ -204,6 +206,47 @@ API. If the API fails, the same step offers the share sheet / prefilled post ins
   stored token unreadable: learners just connect again.
 - LinkedIn documents no way for an app to revoke a member's token. **Disconnect** deletes
   ours; a learner can remove Klymb.ai entirely in LinkedIn's *permitted services* settings.
+
+## Selling System Design
+
+`/system-design` sells the course, and anyone can read it. Tapping Claim is what
+signs them in with Google, which is where the email comes from: the form waits in
+`sessionStorage`, and they come back to it and go straight on to Razorpay, so the
+account that pays is the one that learns. ₹499 runs to the end of 8 November 2026 (IST), then ₹1,999; both live in
+`src/lib/sd-offer.ts`, and the page's countdown and the order's amount read the
+same values, so when the clock reaches zero the price really changes. Someone who
+claimed during the offer keeps its price.
+
+| Piece | Where |
+| --- | --- |
+| The offer's rules: price, deadline, form checks | `src/lib/sd-offer.ts` |
+| The page: price card, form, the trip to Google | `src/app/(course)/system-design`, `src/components/system-design-offer` |
+| Creates the Razorpay order, signed-in only | `src/app/api/sd/order` |
+| Records a payment and opens the course, from checkout or webhook | `src/lib/payments.ts` |
+| Who may open the course, and server-graded lesson checks | `course.enrollments`, `course.lesson_checks` (`db/migrations/0020_enrollments.sql`) |
+| What of the course reaches a browser | `src/lib/sd-lessons.ts` |
+| Grades a lesson check | `src/app/api/sd/check` |
+| The refund terms | `sdRefund` in `src/data/legal.ts`, shown on `/refund-policy` and `/terms` |
+
+**The lock is on the server.** Lesson content lives in
+`src/data/system-design/lessons.ts`, and `/learn/system-design` passes the app only
+the lessons its viewer may open, with the check answers taken out. Paid videos are
+served from R2 only, through `/api/video`, which checks for a seat; never put one
+back in `public/`. `tests/sd-lessons.test.ts` fails if anything a browser loads
+imports a lesson.
+
+**Refunds.** "100% back on finishing" rests on `course.lesson_checks`, which only
+the server writes. The final assessment is still graded in the browser and has to
+move to the server before lesson 22 ships, because finishing needs it. Refunds are
+paid by hand from the admin Payments tab after a reviewer has checked the record.
+
+**Deploying.** Run `npm run db:migrate` before the code goes live. Until it has run
+nobody can buy: the order route stops rather than take money it can't record a seat
+for. To give someone free access:
+
+```sql
+insert into course.enrollments (email, course, source) values ('name@gmail.com', 'system-design', 'grant');
+```
 
 ## Project structure
 

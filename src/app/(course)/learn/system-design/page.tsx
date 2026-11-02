@@ -1,27 +1,21 @@
-import type { Metadata } from "next";
-import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
-import { CookieBanner } from "@/components/legal/CookieBanner";
-import { PreRegister } from "@/components/system-design-register/PreRegister";
+import type { Metadata, Viewport } from "next";
+import { auth, verifiedEmailFrom } from "@/auth";
+import { CourseApp } from "@/components/course-app/CourseApp";
+import { hasCourseAccess } from "@/lib/access";
+import { lessonContent } from "@/lib/sd-lessons";
+import { SD_COURSE } from "@/lib/sd-offer";
 
 export const metadata: Metadata = {
-  title: "Pre-register · System Design in 15 Days",
-  description: "Reserve your place in System Design in 15 Days at the early Diwali price.",
+  title: "System Design course",
+  description: "Short video lessons, in-video quick checks, and a pre- and post-assessment that show what you learned.",
+  robots: { index: false, follow: false },
 };
 
-// Until the course opens, its link takes pre-registrations. The course app
-// (CourseApp) is unchanged and comes back here when enrolment opens.
-export default function SystemDesignCoursePage() {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <AnnouncementBar />
-      <Header />
-      <main id="main" className="flex-1">
-        <PreRegister />
-      </main>
-      <Footer />
-      <CookieBanner />
-    </div>
-  );
+export const viewport: Viewport = { themeColor: "#f3f2f2", viewportFit: "cover" };
+
+export default async function SystemDesignCoursePage() {
+  const session = await auth();
+  const email = verifiedEmailFrom(session);
+  const enrolled = !!email && (await hasCourseAccess(email, SD_COURSE));
+  return <CourseApp user={email ? { email, name: session?.user?.name ?? null } : null} lessons={lessonContent(enrolled)} enrolled={enrolled} />;
 }

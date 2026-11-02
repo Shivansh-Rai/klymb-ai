@@ -7,12 +7,9 @@ import { pad } from "@/lib/course-app";
 import { Icon } from "../icons";
 
 const UI = {
-  en: { tray: "Moves", left: (n: number) => `${n} left`, wrong: "Not there.", built: "Built!", clean: "First try.", tries: (n: number) => `${n} wrong ${n === 1 ? "drop" : "drops"}.`, next: "Continue", picked: "Now tap its slot", hint: "Drag a box to its slot, or tap box then slot" },
-  hi: { tray: "Moves", left: (n: number) => `${n} baaki`, wrong: "Yahan nahi.", built: "Ban gaya!", clean: "Pehli baar mein.", tries: (n: number) => `${n} galat drop.`, next: "Aage badho", picked: "Ab woh slot tap karo", hint: "Box ko slot pe drag karo, ya box tap karo phir slot" },
+  en: { tray: "Pieces", left: (n: number) => `${n} left`, wrong: "Not there.", built: "Built!", clean: "First try.", tries: (n: number) => `${n} wrong ${n === 1 ? "drop" : "drops"}.`, next: "Continue", picked: "Now tap its slot", hint: "Drag a box to its slot, or tap box then slot" },
+  hi: { tray: "Pieces", left: (n: number) => `${n} baaki`, wrong: "Yahan nahi.", built: "Ban gaya!", clean: "Pehli baar mein.", tries: (n: number) => `${n} galat drop.`, next: "Aage badho", picked: "Ab woh slot tap karo", hint: "Box ko slot pe drag karo, ya box tap karo phir slot" },
 };
-
-/** The night's three phases; extra rows in a task fall back to a number. */
-const PHASES = ["Before the sale", "At 12:00 AM", "When it breaks"];
 
 /**
  * Drag a box from the tray onto the slot whose job it does, or tap a box and
@@ -106,7 +103,7 @@ export function DiagramBuilder({ task, lang, onDone }: { task: BuildTask; lang: 
           <div key={r} className="flex min-w-0 flex-col gap-2">
             <div className="flex items-baseline gap-2">
               <span className="text-[11px] font-extrabold tracking-[0.12em] uppercase text-sd-accent">{pad(r + 1)}</span>
-              <span className="text-[15px] font-extrabold tracking-[-0.01em]">{PHASES[r] ?? `Phase ${r + 1}`}</span>
+              {task.rowLabels?.[r] && <span className="text-[15px] font-extrabold tracking-[-0.01em]">{task.rowLabels[r]}</span>}
             </div>
             <div className="relative flex flex-col gap-1.5 pl-4">
               <span aria-hidden="true" className="absolute top-1.5 bottom-1.5 left-1 w-0.5 bg-sd-n-300" />

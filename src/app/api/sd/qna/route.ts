@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth, verifiedEmailFrom } from "@/auth";
-import { LESSON_DAYS } from "@/data/system-design/course-app";
+import { BUILT_LESSONS } from "@/data/system-design/course-app";
 import { getAdmin } from "@/lib/admin/auth";
 import { db } from "@/lib/db/client";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { QNA_PAGE, cleanBody, displayName, isUuid, toFeed, type QnaFeed, type QnaRow } from "@/lib/sd-qna";
 
-const lessonOf = (v: unknown) => (typeof v === "string" && LESSON_DAYS[v] ? v : null);
+const lessonOf = (v: unknown) => (typeof v === "string" && BUILT_LESSONS.includes(v) ? v : null);
 
 /**
  * A lesson's Q&A: questions from learners, replies from learners and the
