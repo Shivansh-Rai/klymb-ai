@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, lessonSteps, localDate, openLesson, pct, startQuiz, streak, type CourseState } from "@/lib/course-app";
+import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openLesson, pct, startQuiz, streak, type CourseState } from "@/lib/course-app";
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
@@ -56,8 +56,8 @@ function kamranSays(s: CourseState, first: string | null) {
   if (!day) return `${hi}${name} is in the full course.`;
   if (!s.done.length && !p) return `Hi${first ? ` ${first}` : ""}, I’m Kamran. ${name} takes about ${day.minutes} minutes.`;
   if (!p) return `${hi}${name} takes about ${day.minutes} minutes.`;
-  const next = lessonSteps(s, s.cur, day).find((x) => !x.done);
-  return `${hi}Pick up at ${STEP_NAME[next?.key ?? "done"]}.`;
+  const next = nextStep(s, s.cur, day);
+  return `${hi}Pick up at ${STEP_NAME[next]}.`;
 }
 
 export function Home({ s, act }: { s: CourseState; act: Act }) {
