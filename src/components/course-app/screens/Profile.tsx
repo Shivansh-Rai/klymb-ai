@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { SUPPORT_EMAIL } from "@/data/support-faq";
 import { badges, dayOf, defaultState, openLesson, streak, type CourseState } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { headline, useReferral } from "../Referral";
@@ -30,6 +32,15 @@ function LinkRow({ label, sub, onClick }: { label: string; sub: string; onClick:
   );
 }
 
+function HrefRow({ label, sub, href }: { label: string; sub: string; href: string }) {
+  return (
+    <Link href={href} className="flex w-full items-center gap-3 text-left">
+      <span className="flex-1"><Label label={label} sub={sub} /></span>
+      <span className="flex text-sd-n-600"><Icon name="chevR" size={16} /></span>
+    </Link>
+  );
+}
+
 export function Profile({ s, act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
   const referral = useReferral();
@@ -47,6 +58,11 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
       <Row>{user ? <><Label label="Signed in" sub={user.email} /><LogOutButton /></> : <div className="flex w-full flex-col gap-2"><Label label="Not signed in" sub="Sign in to keep your progress." /><GoogleButton where="profile" lesson={s.cur} className="h-11 border-2 border-sd-ink sm:max-w-[320px]" /></div>}</Row>
       <Row><LinkRow label="Replay Kamran’s tour" sub="The lesson screen in 5 stops." onClick={() => act((p) => ({ ...openLesson(p, dayOf(p.cur) ? p.cur : "0-0"), toured: false }))} /></Row>
       <Row><LinkRow label="Start over" sub="Clears progress, notes and scores on this device." onClick={() => { if (window.confirm("Start the course over on this device? Your progress here will be cleared.")) act((p) => ({ ...defaultState(), screen: "onboard", onboarded: false, lang: p.lang })); }} /></Row>
+    </>],
+    ["Help", <>
+      <Row><HrefRow label="Email the team" sub={SUPPORT_EMAIL} href={`mailto:${SUPPORT_EMAIL}`} /></Row>
+      <Row><HrefRow label="Refund policy" sub="What it takes to get your fee back." href="/refund-policy" /></Row>
+      <Row><HrefRow label="Terms" sub="What you agreed to when you bought the course." href="/terms" /></Row>
     </>],
   ];
   if (PREVIEW_TOGGLES) groups.push(["Preview states", <>

@@ -228,7 +228,8 @@ export const footerLinks = {
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Cookie Policy", href: "/cookies" },
     { label: "Terms", href: "/terms" },
-    ...(HIDE_MONEY ? [] : [{ label: "Refund Policy", href: "/refund-policy" }]),
+    // Stays with HIDE_MONEY on: System Design is on sale, and its refund rests on this page.
+    { label: "Refund Policy", href: "/refund-policy" },
   ],
 };
 

@@ -1,10 +1,12 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { auth, verifiedEmailFrom } from "@/auth";
+import { auth, currentEmail, verifiedEmailFrom } from "@/auth";
+import { hasCourseAccess } from "@/lib/access";
 import { db } from "@/lib/db/client";
 import { checkDevice } from "@/lib/learner/device";
 import { normaliseEmail } from "@/lib/email";
+import { SD_COURSE } from "@/lib/sd-offer";
 import type { TrackSlug } from "@/types/program";
 
 export interface Learner {
@@ -76,7 +78,14 @@ export const getLearnerState = cache(async (): Promise<LearnerState> => {
   return { state: "enrolled", learner: learner as Learner, submissions: submissions ?? [] };
 });
 
+/** Whoever bought System Design lives in that course for now, ahead of any cohort dashboard. */
+export async function redirectCourseBuyer() {
+  const email = await currentEmail();
+  if (email && (await hasCourseAccess(email, SD_COURSE))) redirect("/learn/system-design");
+}
+
 export async function requireLearner() {
+  await redirectCourseBuyer();
   const result = await getLearnerState();
   if (result.state === "signed-out") redirect("/learn/login");
   if (result.state === "other-device") redirect("/learn/login?error=device");

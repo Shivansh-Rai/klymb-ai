@@ -17,10 +17,11 @@ import { TwoWays } from "@/components/home/TwoWays";
 import { StatementBand } from "@/components/home/StatementBand";
 import { redirect } from "next/navigation";
 import { statement } from "@/data/program";
-import { getLearnerState } from "@/lib/learner/data";
+import { getLearnerState, redirectCourseBuyer } from "@/lib/learner/data";
 
 export default async function HomePage() {
-  // A signed-in learner wants their cohort, not the sales page.
+  // A signed-in learner wants their course or cohort, not the sales page.
+  await redirectCourseBuyer();
   const learner = await getLearnerState();
   if (learner.state === "enrolled") redirect("/learn");
 
