@@ -58,8 +58,8 @@ export async function GET(req: Request) {
        and (e.reminded_on is null or e.reminded_on < ${today}::date)
        and (${only}::text is null or e.email = ${only})
   `;
-  // 42703: the columns aren't there, so 0021_sd_mail.sql hasn't run here.
-  if (error) return NextResponse.json({ error: error.code === "42703" ? "Run npm run db:migrate (0021_sd_mail.sql)." : error.message }, { status: 500 });
+  // 42703: the columns aren't there, so 0022_sd_mail.sql hasn't run here.
+  if (error) return NextResponse.json({ error: error.code === "42703" ? "Run npm run db:migrate (0022_sd_mail.sql)." : error.message }, { status: 500 });
   if (!learners?.length) return NextResponse.json({ checked: 0, sent: 0, today });
 
   const { data: checks, error: checksError } = await sql.rows<{ email: string; lesson: string; passed_on: string }>`

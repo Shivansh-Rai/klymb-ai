@@ -290,7 +290,7 @@ When the final assessment moves to the server, record its pass in
 assessment reminder stops once it is passed. Every reminder has a one-click
 unsubscribe (`/api/sd/unsubscribe`), which sets `enrollments.reminders_off_at`.
 
-`0021_sd_mail.sql` adds the columns these need; run `npm run db:migrate` first.
+`0022_sd_mail.sql` adds the columns these need; run `npm run db:migrate` first.
 The reminder job is `.github/workflows/sd-reminders.yml`, with `CRON_SECRET` as a
 repository secret, and is safe to re-run by hand.
 
