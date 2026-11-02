@@ -274,6 +274,7 @@ it twice.
 | `registration.welcome` | A new registration for a 30-day track | `src/lib/welcome.ts` |
 | `registration.followup.{1,2,3}` | Registered, not paid: 1 hour, 1 day, 3 days | `/api/cron/followups` (hourly) |
 | `payment.receipt`, `sd.receipt` | A payment verifies; the SD one is the receipt and welcome | `src/lib/receipt.ts` |
+| `sd.referral_earned` | A referrer's third friend pays: their refund is earned | `src/lib/referrals.ts` |
 | `sd.invite` | Pre-registered before payments opened: it's open, your price is held. Off until `SD_INVITE_PREREGISTERED=true` | `src/lib/sd-invites.ts`, from the hourly job |
 | `sd.reminder.lesson`, `sd.reminder.assessment` | 20:00 IST, an enrolled learner passed no lesson check today | `/api/cron/sd-reminders`, `src/lib/sd-reminders.ts` |
 | `support.ticket` | A help request, to the team inbox | `/api/support/ticket` |

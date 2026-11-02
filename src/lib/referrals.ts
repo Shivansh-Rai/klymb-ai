@@ -133,7 +133,8 @@ export async function creditReferrer(sql: Db, orderId: string) {
     siteUrl: site.url,
     supportEmail: grievance.email,
   });
-  const sent = await sendMail({ to: { email, name: seat.name ?? undefined }, ...mail });
+  // Earned once per seat, so the address is a stable key: ABT-Mailer never sends it twice.
+  const sent = await sendMail({ to: { email, name: seat.name ?? undefined }, ...mail, kind: "sd.referral_earned", idempotencyKey: email });
   if (!sent.ok) console.error("referral earned email failed:", email, sent.reason);
   return { error: null };
 }

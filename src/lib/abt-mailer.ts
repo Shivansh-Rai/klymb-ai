@@ -50,9 +50,10 @@ export function routesViaAbtMailer(kind: string, env: Record<string, string | un
 
 /**
  * Mail the recipient must get even after turning off optional mail: a record
- * of money they paid. ABT-Mailer only lets a hard bounce stop these.
+ * of money they paid, or a refund they earned. ABT-Mailer only lets a hard
+ * bounce stop these.
  */
-const ESSENTIAL_KINDS = kindList("payment.receipt,sd.receipt");
+const ESSENTIAL_KINDS = kindList("payment.receipt,sd.receipt,sd.referral_earned");
 
 export function abtMailerCategory(kind: string): "TRANSACTIONAL_ESSENTIAL" | "TRANSACTIONAL_NONESSENTIAL" {
   return kindMatches(ESSENTIAL_KINDS, kind) ? "TRANSACTIONAL_ESSENTIAL" : "TRANSACTIONAL_NONESSENTIAL";

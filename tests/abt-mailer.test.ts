@@ -24,6 +24,7 @@ test("routes only listed kinds, only when configured, and the keep list wins", (
 test("receipts are essential, everything else isn't", () => {
   assert.equal(abtMailerCategory("sd.receipt"), "TRANSACTIONAL_ESSENTIAL");
   assert.equal(abtMailerCategory("payment.receipt"), "TRANSACTIONAL_ESSENTIAL");
+  assert.equal(abtMailerCategory("sd.referral_earned"), "TRANSACTIONAL_ESSENTIAL");
   assert.equal(abtMailerCategory("sd.reminder.lesson"), "TRANSACTIONAL_NONESSENTIAL");
 });
 
