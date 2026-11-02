@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Wordmark } from "./Wordmark";
 import { products } from "@/data/products";
 import { ProductsMenu } from "./ProductsMenu";
+import { AccountLink } from "./AccountLink";
 import { AdminLink } from "./AdminLink";
 
 /**
@@ -51,23 +52,31 @@ export function Header() {
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-5 lg:flex">
-          <AdminLink className="text-xs font-extrabold uppercase tracking-wider underline-offset-4 hover:text-red-deep hover:underline" />
-          <ButtonLink href="/tracks" className="rounded-full px-6 py-2.5 text-xs">Choose Your Track</ButtonLink>
-        </div>
+        <div className="flex items-center gap-3 lg:gap-5">
+          {/* Outside the menu on phones too: it is the one thing a returning student comes here for. */}
+          <AccountLink className="inline-flex min-h-11 items-center px-1 text-sm font-bold transition-colors hover:text-red-deep" />
 
-        <button
-          type="button"
-          className="inline-flex size-11 items-center justify-center rounded-lg bg-card shadow-card lg:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-            {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
+          <div className="hidden items-center gap-5 lg:flex">
+            <AdminLink className="text-xs font-extrabold uppercase tracking-wider underline-offset-4 hover:text-red-deep hover:underline" />
+            {/* Below xl the hero's folder tab leaves room for the account link alone. */}
+            <div className="hidden xl:block">
+              <ButtonLink href="/tracks" className="rounded-full px-6 py-2.5 text-xs">Choose Your Track</ButtonLink>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex size-11 items-center justify-center rounded-lg bg-card shadow-card lg:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+              {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {open && (

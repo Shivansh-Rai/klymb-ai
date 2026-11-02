@@ -99,11 +99,12 @@ export function SupportBot() {
   // A drag ends in a click on the launcher; this lets the click know to do nothing.
   const dragged = useRef(false);
   const learner = pathname.startsWith("/learn");
+  const inCourse = pathname.startsWith("/learn/system-design");
 
   const topics = useMemo(() => {
-    const rank = (t: SupportTopic) => (t.audience === (learner ? "learner" : "public") ? 0 : t.audience === "both" ? 1 : 2);
+    const rank = (t: SupportTopic) => (inCourse && t.id === "system-design" ? -1 : t.audience === (learner ? "learner" : "public") ? 0 : t.audience === "both" ? 1 : 2);
     return [...supportTopics()].sort((a, b) => rank(a) - rank(b));
-  }, [learner]);
+  }, [learner, inCourse]);
   const answers = useMemo(() => topics.flatMap((t) => t.items), [topics]);
 
   // Learner context, fetched once when the chat first opens on a learner page.

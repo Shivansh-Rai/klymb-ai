@@ -43,6 +43,9 @@ test("common questions find the right answer", () => {
   const items = allSupportAnswers();
   const cases: [string, string][] = [
     ["next day nahi khul raha", "locked"],
+    ["how do i open my system design course", "sd-open"],
+    ["i paid but it asks me to buy again", "sd-paid"],
+    ["system design refund", "sd-refund"],
     ["how to turn on notifications", "reminders-on"],
     ["signed in on another phone", "other-device"],
     ["when are mock interviews", "mock"],
