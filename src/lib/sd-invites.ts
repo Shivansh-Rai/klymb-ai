@@ -1,9 +1,8 @@
 import "server-only";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { type Db } from "@/lib/db/client";
 import { formatINR } from "@/lib/format";
-import { sdInviteEmail, sendMail } from "@/lib/mail";
+import { MAIL_SUPPORT, sdInviteEmail, sendMail } from "@/lib/mail";
 import { SD_COURSE, SD_OFFER, offerPath, sdPriceFor } from "@/lib/sd-offer";
 import { sdLessonCounts } from "@/lib/sd-reminders";
 
@@ -57,7 +56,7 @@ export async function inviteSdPreregistrations(sql: Db, env: Record<string, stri
       lessonsTotal: lessons.total,
       url: `${site.url}${offerPath("prereg-invite")}`,
       siteUrl: site.url,
-      supportEmail: grievance.email,
+      supportEmail: MAIL_SUPPORT,
     });
     const result = await sendMail({ to: { email: r.email, name: r.name }, ...mail, kind: "sd.invite", idempotencyKey: r.email });
     if (result.ok) sent++;

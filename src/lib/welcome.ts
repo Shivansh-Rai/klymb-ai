@@ -1,10 +1,9 @@
 import "server-only";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { getTrack } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 import { offerOpen, priceNow } from "@/lib/offer";
-import { sendMail, welcomeEmail } from "@/lib/mail";
+import { MAIL_SUPPORT, sendMail, welcomeEmail } from "@/lib/mail";
 
 /**
  * The welcome email for a new registration. Called only when the registration
@@ -22,7 +21,7 @@ export async function sendWelcome({ email, name, track }: { email: string; name:
     price: offerOpen() ? `${formatINR(priceNow(t.price))} (launch offer, was ${formatINR(t.price)})` : formatINR(t.price),
     free: t.price === 0,
     siteUrl: site.url,
-    supportEmail: grievance.email,
+    supportEmail: MAIL_SUPPORT,
   });
   const sent = await sendMail({ to: { email, name }, ...mail, kind: "registration.welcome" });
   if (!sent.ok) console.error("welcome email failed:", sent.reason);

@@ -1,11 +1,14 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+import { SUPPORT_EMAIL } from "@/data/support-faq";
 import { abtMailerReady, routesViaAbtMailer, sendViaAbtMailer } from "@/lib/abt-mailer";
 import { SD_REFERRAL } from "@/lib/sd-offer";
 import { HIDE_MONEY } from "@/lib/site-status";
 
 const SENDER_NAME = "Klymb.ai";
+/** The address every mail says to write to: the support inbox, not the legal grievance contact on the policy pages. */
+export const MAIL_SUPPORT = SUPPORT_EMAIL;
 const SD_LIVE = `${BUILT_LESSONS.length} of the ${MODULES.reduce((n, m) => n + m.lessons.length, 0)} lessons are out today`;
 
 export type MailResult = { ok: true } | { ok: false; reason: string; skipped?: boolean };
@@ -135,8 +138,7 @@ ${body}
 </td></tr>
 <tr><td align="center" style="padding:22px 10px 0;font-size:12px;line-height:1.7;color:#8a8785">
   ${wordmark(o.site, C.ink)}<br>
-  <a href="${o.site}/tracks" style="color:#8a8785">Career tracks</a> &nbsp;·&nbsp; ${HIDE_MONEY ? "" : `<a href="${o.site}/refund-policy" style="color:#8a8785">Refund policy</a> &nbsp;·&nbsp; `}<a href="${o.site}/contact" style="color:#8a8785">Contact</a><br>
-  Klymb.ai, a programme of Creators Enterprises Private Limited
+  <a href="${o.site}/tracks" style="color:#8a8785">Career tracks</a> &nbsp;·&nbsp; ${HIDE_MONEY ? "" : `<a href="${o.site}/refund-policy" style="color:#8a8785">Refund policy</a> &nbsp;·&nbsp; `}<a href="${o.site}/contact" style="color:#8a8785">Contact</a>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }

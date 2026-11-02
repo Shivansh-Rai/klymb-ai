@@ -1,12 +1,11 @@
 import { isCronRequest } from "@/lib/cron-auth";
 import { NextResponse } from "next/server";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { getTrack } from "@/data/tracks";
 import { hasPaid } from "@/lib/access";
 import { formatINR } from "@/lib/format";
 import { dueFollowup, FOLLOWUP_DONE } from "@/lib/followups";
-import { mailReady, noteEmail, sendMail } from "@/lib/mail";
+import { MAIL_SUPPORT, mailReady, noteEmail, sendMail } from "@/lib/mail";
 import { inviteSdPreregistrations } from "@/lib/sd-invites";
 import { db } from "@/lib/db/client";
 import { refreshCommitDays } from "@/lib/learner/commits";
@@ -122,7 +121,7 @@ function followupEmail(
   const offerLine = p.offer
     ? `Launch price: ${formatINR(LAUNCH_OFFER.price)} instead of ${formatINR(p.listPrice)}, until ${LAUNCH_OFFER.endsLabel}.`
     : "";
-  const common = { siteUrl: site.url, supportEmail: grievance.email, eyebrow: p.trackName };
+  const common = { siteUrl: site.url, supportEmail: MAIL_SUPPORT, eyebrow: p.trackName };
   const unlock = { title: "Unlock Days 2 to 30", body: `${price}. 100% back when you complete all 30 days.` };
 
   if (step === 1) {

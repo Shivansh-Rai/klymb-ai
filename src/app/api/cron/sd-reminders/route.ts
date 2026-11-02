@@ -1,11 +1,10 @@
 import { isCronRequest } from "@/lib/cron-auth";
 import { NextResponse } from "next/server";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { db } from "@/lib/db/client";
 import { normaliseEmail } from "@/lib/email";
 import { todayInIndia } from "@/lib/learn";
-import { mailReady, sdReminderEmail, sendMail } from "@/lib/mail";
+import { MAIL_SUPPORT, mailReady, sdReminderEmail, sendMail } from "@/lib/mail";
 import { SD_COURSE } from "@/lib/sd-offer";
 import { pickSdReminder, unsubscribeToken, type ReminderPick } from "@/lib/sd-reminders";
 
@@ -99,7 +98,7 @@ export async function GET(req: Request) {
       url: `${site.url}/learn/system-design${lesson ? `?lesson=${lesson.id}` : ""}`,
       unsubscribeUrl,
       siteUrl: site.url,
-      supportEmail: grievance.email,
+      supportEmail: MAIL_SUPPORT,
     });
     const result = await sendMail({
       to: { email: l.email, name: l.name ?? undefined },

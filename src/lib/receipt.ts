@@ -1,10 +1,9 @@
 import "server-only";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { getTrack } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 import { db } from "@/lib/db/client";
-import { mailReady, sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
+import { MAIL_SUPPORT, mailReady, sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
 import { referralFor } from "@/lib/referrals";
 import { SD_COURSE } from "@/lib/sd-offer";
 
@@ -42,7 +41,7 @@ export async function sendReceiptOnce(orderId: string) {
     amount: formatINR(pay.amount / 100),
     paymentId: pay.razorpay_payment_id ?? orderId,
     siteUrl: site.url,
-    supportEmail: grievance.email,
+    supportEmail: MAIL_SUPPORT,
   };
   const referral = sd ? await referralFor(pay.email) : null;
   const mail = sd ? sdReceiptEmail({ ...details, referral: referral?.state === "open" ? referral : null }) : thankYouEmail({ ...details, trackName: getTrack(pay.track)?.name ?? pay.track });
