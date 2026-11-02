@@ -239,16 +239,24 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
   const [pledge, setPledge] = useState([false, false]);
   const [name, setName] = useState(user?.name ?? "");
   const [holding, setHolding] = useState(false);
+  const [tapped, setTapped] = useState(0);
   const timer = useRef(0);
+  const pressed = useRef(false);
   const done = !!s.commitment;
   const can = pledge.every(Boolean) && name.trim().length > 1;
   const down = () => {
     if (!can || done) return;
     window.clearTimeout(timer.current);
+    pressed.current = true;
     setHolding(true);
-    timer.current = window.setTimeout(() => { setHolding(false); act((p) => commit(p, name)); track("welcome", null, null, { choice: "commit" }); }, HOLD_MS);
+    timer.current = window.setTimeout(() => { pressed.current = false; setHolding(false); act((p) => commit(p, name)); track("welcome", null, null, { choice: "commit" }); }, HOLD_MS);
   };
-  const up = () => { window.clearTimeout(timer.current); setHolding(false); };
+  // Let go too soon and the button says so: a shake, and the hint below spells out the hold.
+  const up = () => {
+    window.clearTimeout(timer.current);
+    setHolding(false);
+    if (pressed.current) { pressed.current = false; setTapped((n) => n + 1); }
+  };
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const start = () => act((p) => openLesson({ ...p, onboarded: true }, p.cur));
   const signed = s.commitment ? new Date(`${s.commitment.date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
@@ -297,12 +305,12 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
                 onKeyDown={(e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } }}
                 onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") up(); }}
                 onContextMenu={(e) => e.preventDefault()}
-                className="sd-btn sd-btn-primary sd-btn-block relative h-14 touch-none overflow-hidden text-base select-none"
+                className={clsx("sd-btn sd-btn-primary sd-btn-block relative h-14 touch-none overflow-hidden text-base select-none", tapped > 0 && (tapped % 2 ? "sd-a-shake" : "sd-a-shake-b"))}
               >
                 <span className={clsx("absolute inset-y-0 left-0 bg-sd-accent-900", holding ? "w-full transition-[width] duration-[1200ms] ease-linear" : "w-0 transition-[width] duration-200 ease-out")} />
                 <span className="relative flex items-center gap-2"><Icon name="check" />{holding ? "Keep holding…" : "Hold to commit"}</span>
               </button>
-              <span className="text-xs text-sd-n-700">{can ? "Hold for a second." : "Tick both and sign."}</span>
+              <span aria-live="polite" className={clsx("text-xs", can && tapped > 0 ? "font-extrabold text-sd-accent-700" : "text-sd-n-700")}>{!can ? "Tick both and sign." : tapped > 0 ? "Press and hold until it fills." : "Hold for a second."}</span>
             </div>
           </>
         ) : (
