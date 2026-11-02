@@ -4,15 +4,18 @@ import clsx from "clsx";
 import { useEffect, useRef, type ReactNode } from "react";
 import { MODULES } from "@/data/system-design/course-app";
 import {
-  ALL_IDS, addNote, assessmentStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
+  ALL_IDS, addNote, assessmentStep, practiceStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, revisitable, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
   addRewatch, retryVideo, seekTo, subtitleLines, togglePlay, updateLesson, type CourseState, type PlayerTab,
 } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { Community } from "../lesson/Community";
 import { LessonStage } from "../lesson/Practice";
+import { Revisit } from "../lesson/Revisit";
 import { Tour } from "../lesson/Tour";
+import { VideoWatermark } from "../lesson/VideoWatermark";
 import { track } from "../track";
 import { BackButton, Duration, LessonMark, lessonView } from "../ui";
+import { useCourseUser } from "../user";
 import type { Act } from "../useCourseApp";
 import { SUB_SIZE_CLASS, VideoBar, canSubtitle, useMenu, usePlayerKeys } from "./PlayerControls";
 
@@ -31,6 +34,7 @@ function Video({ s, act, subs, bar }: { s: CourseState; act: Act; subs?: boolean
   // Where playback was at the last time update, to count only real playback after a miss.
   const last = useRef<{ id: string; t: number }>({ id: "", t: 0 });
   const errOffline = s.offline && !s.vidErr;
+  const email = useCourseUser()?.email;
 
   useEffect(() => {
     const v = ref.current;
@@ -108,6 +112,7 @@ function Video({ s, act, subs, bar }: { s: CourseState; act: Act; subs?: boolean
         onError={() => act((p) => ({ ...p, vidErr: true, playing: false }))}
         className={clsx("block cursor-pointer bg-black", wide ? "aspect-video w-full" : "aspect-[9/16] h-[min(68dvh,560px)] max-w-full lg:h-[640px]")}
       />
+      {email && !s.vidErr && !errOffline && <VideoWatermark text={email} />}
       {subs && <Subtitles s={s} />}
       {!s.playing && !s.vidErr && !errOffline && (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center bg-black/18">
@@ -161,7 +166,14 @@ function Notes({ s, act }: { s: CourseState; act: Act }) {
 /** Every lesson of the course, by module, with the current one scrolled into view. */
 function CourseLessons({ s, act }: { s: CourseState; act: Act }) {
   const here = useRef<HTMLButtonElement>(null);
-  useEffect(() => { here.current?.scrollIntoView({ block: "nearest" }); }, []);
+  // Inside the panel only: scrollIntoView would also move the page behind it, away from the step on screen.
+  useEffect(() => {
+    const row = here.current;
+    const panel = row?.closest<HTMLElement>("[data-lesson-panel]");
+    if (!row || !panel) return;
+    const top = row.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+    if (top < 0 || top + row.offsetHeight > panel.clientHeight) panel.scrollTop += top;
+  }, []);
   return (
     <div className="flex flex-col px-5 py-3.5 lg:px-3.5 lg:pt-2">
       {MODULES.map((m, mi) => (
@@ -194,7 +206,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
   const day = dayOf(s.cur);
   const nextId = ALL_IDS[ALL_IDS.indexOf(s.cur) + 1];
   const qc = hasQuickCheck(s.cur) ? fmt(quickCheckAt(s.cur)) : null;
-  const done = flowDone(s, s.cur);
+  const done = flowDone(s, s.cur) && s.stage !== "done";
   const completeLabel = nextId ? "Mark complete · next lesson" : "Mark complete";
   const tabs: [PlayerTab, string][] = [
     ["lessons", "Lessons"],
@@ -207,7 +219,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
   // The assessment takes the whole column: from the questions on, and while the estimates, build,
   // design and follow-ups are being worked through, the lesson title and the side panel step aside.
   const inAs = s.stage === "prove" && s.checkStage !== "intro";
-  const hideChrome = inAs || assessmentStep(s, s.cur) > 0;
+  const hideChrome = inAs || assessmentStep(s) > 0 || practiceStep(s, s.cur) > 0;
   const subsOn = !!day && canSubtitle(s) && s.subs;
   const menu = useMenu();
   usePlayerKeys(act, !!day && !s.qcOpen);
@@ -247,6 +259,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
               </div>
             </div>
           )}
+          {watching && day && revisitable(s, s.cur) && <div className="px-5 lg:px-0"><Revisit s={s} act={act} id={s.cur} day={day} /></div>}
         </div>
 
         {!hideChrome && <div data-tour="tabs" className="mt-4 flex flex-col lg:col-start-2 lg:row-start-1 lg:mt-0 lg:overflow-hidden lg:rounded-xl lg:border-2 lg:border-sd-divider">
@@ -268,7 +281,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
             ))}
           </div>
           {/* One height for every tab, so switching never changes the page's length and the tabs stay where they are. */}
-          <div className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
+          <div data-lesson-panel className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
             {s.ptab === "lessons" && <CourseLessons s={s} act={act} />}
             {s.ptab === "qna" && day && <Community key={s.cur} lesson={s.cur} day={day} lang={s.lang} />}
             {s.ptab === "notes" && <Notes s={s} act={act} />}

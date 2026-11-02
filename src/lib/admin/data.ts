@@ -1,6 +1,8 @@
 import "server-only";
 import { getAdmin } from "@/lib/admin/auth";
 import { db } from "@/lib/db/client";
+import { SD_COURSE, referralDeadline } from "@/lib/sd-offer";
+import { paceOf, type Pace } from "@/lib/sd-pace";
 import type { TrackSlug } from "@/types/program";
 
 export interface Registration {
@@ -177,13 +179,20 @@ export interface PaymentRow {
   id: string;
   created_at: string;
   email: string;
-  track: TrackSlug;
+  track: TrackSlug | typeof SD_COURSE;
   cohort_start: string;
   amount: number;
   status: "paid" | "refunded";
   razorpay_payment_id: string | null;
   /** The latest refund an admin asked Razorpay for, from the audit log. */
   refund_request: { by: string; at: string } | null;
+  /** Whose link or code this order came through. */
+  referred_by: string | null;
+  /** Friends who count right now, or null when this payment holds no seat. */
+  friends: number | null;
+  referral_earned_at: string | null;
+  /** System Design: where the finishing refund stands, from the same rules the learner sees. Null with no seat. */
+  pace: { refund: Pace["refund"]; missed_on: string | null; day: number } | null;
 }
 
 /** Completed payments only: unpaid orders are abandoned checkouts, not money. */
@@ -191,9 +200,9 @@ export async function getPayments(): Promise<PaymentRow[]> {
   if (!(await getAdmin())) return [];
   const sql = db();
   if (!sql) return [];
-  const [{ data }, { data: log }] = await Promise.all([
-    sql.rows<Omit<PaymentRow, "refund_request">>`
-      select id, created_at, email, track, cohort_start, amount, status, razorpay_payment_id
+  const [{ data }, { data: log }, { data: seats }, { data: passes }, { data: finals }] = await Promise.all([
+    sql.rows<Omit<PaymentRow, "refund_request" | "friends" | "referral_earned_at" | "pace">>`
+      select id, created_at, email, track, cohort_start, amount, status, razorpay_payment_id, referrer_email as referred_by
         from course.payments
        where status in ('paid', 'refunded')
        order by created_at desc
@@ -206,7 +215,32 @@ export async function getPayments(): Promise<PaymentRow[]> {
        order by at desc
        limit 1000
     `,
+    sql.rows<{ payment_id: string; created_at: string; referral_earned_at: string | null; referrer_email: string | null; email: string }>`
+      select e.payment_id, e.created_at, e.referral_earned_at, e.email, p.referrer_email
+        from course.enrollments e
+        join course.payments p on p.id = e.payment_id
+       where e.status = 'active' and e.source = 'payment'
+    `,
+    sql.rows<{ email: string; lesson: string; at: string }>`
+      select email, lesson, passed_at as at from course.lesson_checks where course = ${SD_COURSE} and passed_at is not null
+    `,
+    sql.rows<{ email: string; attempt: number; score: number; at: string }>`
+      select email, attempt, score, taken_at as at from course.final_attempts where course = ${SD_COURSE}
+    `,
   ]);
+
+  const paceFor = (email: string) => {
+    const pace = paceOf({
+      passes: (passes ?? []).filter((p) => p.email === email),
+      finals: (finals ?? []).filter((f) => f.email === email),
+      refundable: true,
+    });
+    return { refund: pace.refund, missed_on: pace.missedOn, day: pace.day };
+  };
+
+  const seatByPayment = new Map((seats ?? []).map((seat) => [seat.payment_id, seat]));
+  const friendsOf = (seat: { email: string; created_at: string }) =>
+    (seats ?? []).filter((f) => f.referrer_email === seat.email && new Date(f.created_at).getTime() < referralDeadline(seat.created_at)).length;
 
   // Newest first, so the first accepted request per payment wins.
   const requests = new Map<string, { by: string; at: string }>();
@@ -215,10 +249,16 @@ export async function getPayments(): Promise<PaymentRow[]> {
     if (id && e.details.ok && !requests.has(id)) requests.set(id, { by: e.admin_email, at: e.at });
   }
 
-  return (data ?? []).map((p) => ({
-    ...p,
-    refund_request: (p.razorpay_payment_id && requests.get(p.razorpay_payment_id)) || null,
-  }));
+  return (data ?? []).map((p) => {
+    const seat = seatByPayment.get(p.id);
+    return {
+      ...p,
+      refund_request: (p.razorpay_payment_id && requests.get(p.razorpay_payment_id)) || null,
+      friends: seat ? friendsOf(seat) : null,
+      referral_earned_at: seat?.referral_earned_at ?? null,
+      pace: seat ? paceFor(seat.email) : null,
+    };
+  });
 }
 
 export interface OverviewCounts {

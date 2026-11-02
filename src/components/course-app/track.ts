@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { checkPct, dayOf, lessonSteps, type CourseState, type LessonProgress } from "@/lib/course-app";
+import { PRACTICE_KEYS, checkPct, dayOf, nextStep, type CourseState, type LessonProgress } from "@/lib/course-app";
 import type { SdEvent } from "@/lib/sd-events";
 import { inRange } from "./lesson/Practice";
 
@@ -128,8 +128,8 @@ export function useActivity(s: CourseState, ready: boolean, preview: boolean) {
       const st = latest.current;
       const day = dayOf(st.cur);
       if (st.screen !== "player" || !day || document.visibilityState !== "visible") return;
-      const cur = lessonSteps(st, st.cur, day).find((x) => !x.done);
-      track("ping", st.cur, cur?.key ?? "done", { t: Math.round(st.t), playing: st.playing });
+      const cur = PRACTICE_KEYS.includes(st.stage) ? st.stage : nextStep(st, st.cur, day);
+      track("ping", st.cur, cur, { t: Math.round(st.t), playing: st.playing });
     }, 30000);
     return () => window.clearInterval(iv);
   }, [on]);

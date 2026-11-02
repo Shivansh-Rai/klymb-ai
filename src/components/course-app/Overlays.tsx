@@ -193,7 +193,7 @@ export function PaywallSheet({ s, act }: { s: CourseState; act: Act }) {
       <div role="dialog" aria-modal="true" aria-labelledby="sd-pay-t" className="sd-a-in sd-lg-shadow flex flex-col gap-3 rounded-t-2xl border-t-[3px] border-sd-accent bg-sd-bg px-5 pt-[18px] pb-[34px] lg:w-[min(480px,90%)] lg:rounded-2xl lg:p-6" style={{ animationDuration: ".35s" }}>
         <span className="sd-kicker text-sd-accent-700">{lessonDay(s.cur)}</span>
         <h3 id="sd-pay-t" className="m-0 text-2xl leading-[1.15] tracking-[-0.02em] text-balance">This lesson is in the full course.</h3>
-        <p className="m-0 text-[15px] leading-[1.45] text-pretty text-sd-n-800">The course intro is free. The full course opens every lesson, and you get 100% of your money back when you finish it.</p>
+        <p className="m-0 text-[15px] leading-[1.45] text-pretty text-sd-n-800">The course intro is free. The full course opens every lesson, and you get 100% of your money back when you finish on schedule: one lesson a day, no missed days, 70% or higher on the final assessment.</p>
         <Link ref={offer} href="/system-design" className="sd-btn sd-btn-primary mt-1 h-[52px] justify-between text-base">See the offer<Icon name="arrowR" /></Link>
         <button type="button" onClick={close} className="sd-btn sd-btn-ghost self-start">Not now</button>
       </div>
@@ -227,9 +227,9 @@ export function Toast({ text }: { text: string }) {
   );
 }
 
-const PLEDGES = (goal: number): { icon: "shield" | "flame"; title: string; body: string }[] => [
+const PLEDGES: { icon: "shield" | "flame"; title: string; body: string }[] = [
   { icon: "shield", title: "I’ll learn honestly", body: "No looking up answers. An honest score shows what to rewatch." },
-  { icon: "flame", title: "I’ll practise every day", body: `One lesson a day. ${goal} minutes is enough.` },
+  { icon: "flame", title: "I’ll do one lesson every day", body: "If I miss a day, I can keep learning, but my streak resets and I lose the refund." },
 ];
 const HOLD_MS = 1200;
 
@@ -239,18 +239,26 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
   const [pledge, setPledge] = useState([false, false]);
   const [name, setName] = useState(user?.name ?? "");
   const [holding, setHolding] = useState(false);
+  const [tapped, setTapped] = useState(0);
   const timer = useRef(0);
+  const pressed = useRef(false);
   const done = !!s.commitment;
   const can = pledge.every(Boolean) && name.trim().length > 1;
   const down = () => {
     if (!can || done) return;
     window.clearTimeout(timer.current);
+    pressed.current = true;
     setHolding(true);
-    timer.current = window.setTimeout(() => { setHolding(false); act((p) => commit(p, name)); track("welcome", null, null, { choice: "commit" }); }, HOLD_MS);
+    timer.current = window.setTimeout(() => { pressed.current = false; setHolding(false); act((p) => commit(p, name)); track("welcome", null, null, { choice: "commit" }); }, HOLD_MS);
   };
-  const up = () => { window.clearTimeout(timer.current); setHolding(false); };
+  // Let go too soon and the button says so: a shake, and the hint below spells out the hold.
+  const up = () => {
+    window.clearTimeout(timer.current);
+    setHolding(false);
+    if (pressed.current) { pressed.current = false; setTapped((n) => n + 1); }
+  };
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const start = () => act((p) => openLesson({ ...p, onboarded: true }, "0-0"));
+  const start = () => act((p) => openLesson({ ...p, onboarded: true }, p.cur));
   const signed = s.commitment ? new Date(`${s.commitment.date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
 
   return (
@@ -261,7 +269,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
             <span className="sd-kicker text-sd-accent-700">Before you start</span>
             <h1 className="m-0 mb-1 text-[34px] leading-[.98] tracking-[-0.04em] text-balance lg:text-[52px]">Make two promises.</h1>
             <div className="flex flex-col gap-2.5" role="group" aria-label="Promises">
-              {PLEDGES(s.goal).map((pl, i) => {
+              {PLEDGES.map((pl, i) => {
                 const on = pledge[i];
                 return (
                   <button
@@ -297,12 +305,12 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
                 onKeyDown={(e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } }}
                 onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") up(); }}
                 onContextMenu={(e) => e.preventDefault()}
-                className="sd-btn sd-btn-primary sd-btn-block relative h-14 touch-none overflow-hidden text-base select-none"
+                className={clsx("sd-btn sd-btn-primary sd-btn-block relative h-14 touch-none overflow-hidden text-base select-none", tapped > 0 && (tapped % 2 ? "sd-a-shake" : "sd-a-shake-b"))}
               >
                 <span className={clsx("absolute inset-y-0 left-0 bg-sd-accent-900", holding ? "w-full transition-[width] duration-[1200ms] ease-linear" : "w-0 transition-[width] duration-200 ease-out")} />
                 <span className="relative flex items-center gap-2"><Icon name="check" />{holding ? "Keep holding…" : "Hold to commit"}</span>
               </button>
-              <span className="text-xs text-sd-n-700">{can ? "Hold for a second." : "Tick both and sign."}</span>
+              <span aria-live="polite" className={clsx("text-xs", can && tapped > 0 ? "font-extrabold text-sd-accent-700" : "text-sd-n-700")}>{!can ? "Tick both and sign." : tapped > 0 ? "Press and hold until it fills." : "Hold for a second."}</span>
             </div>
           </>
         ) : (
@@ -316,7 +324,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
                 <span className="text-xs text-sd-n-700">Signed {signed}</span>
               </div>
             </div>
-            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start Day 1<Icon name="arrowR" /></button>
+            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start {lessonDay(s.cur)}<Icon name="arrowR" /></button>
           </>
         )}
       </div>

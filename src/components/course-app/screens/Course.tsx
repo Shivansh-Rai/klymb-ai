@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { MODULES } from "@/data/system-design/course-app";
 import {
-  ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, checkScores, isSoon, moduleIds, moduleMinutes, openLesson, pad, pct, startQuiz, type CourseState,
+  ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, checkScores, isSoon, moduleIds, moduleMinutes, openFinal, openLesson, pad, pct, type CourseState,
 } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { Bar, Duration, LessonMark, lessonView, stagger } from "../ui";
@@ -29,7 +29,7 @@ export function firstOpenLesson(s: CourseState) {
 function AssessmentRow({ kind, s, act }: { kind: "lessons" | "final"; s: CourseState; act: Act }) {
   const lessons = kind === "lessons";
   const scored = checkScores(s);
-  const go = () => act((p) => (lessons ? openLesson(p, firstOpenLesson(p)) : p.post ? { ...p, screen: "results", lastKind: "post" } : startQuiz(p, "post")));
+  const go = () => act((p) => (lessons ? openLesson(p, firstOpenLesson(p)) : openFinal(p)));
   const sub = lessons
     ? `${scored.filter((x) => x.passed).length} passed · ${Math.round(PASS_MARK * 100)}% to pass`
     : s.post ? `Done · ${pct(s.post)}` : "6 questions across the course · after Day 21";

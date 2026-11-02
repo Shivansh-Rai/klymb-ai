@@ -14,7 +14,8 @@ import { companyInviteEmail, sendMail } from "@/lib/mail";
 export async function sendCompanyInvite(p: { email: string; name: string | null; company: CompanyBrand; role: "hr" | "employee"; resend?: boolean }) {
   const { fromName, ...mail } = companyInviteEmail({ ...p, siteUrl: site.url, supportEmail: grievance.email });
   try {
-    const sent = await sendMail({ to: { email: p.email, ...(p.name ? { name: p.name } : {}) }, fromName, ...mail });
+    // No idempotency key: Resend is meant to send the email again.
+    const sent = await sendMail({ to: { email: p.email, ...(p.name ? { name: p.name } : {}) }, fromName, ...mail, kind: "company.invite" });
     if (!sent.ok) console.error("company invite email failed:", sent.reason);
     return sent.ok;
   } catch (e) {

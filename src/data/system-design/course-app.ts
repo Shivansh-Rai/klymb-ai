@@ -19,66 +19,85 @@ export interface CourseModule {
 
 export const MODULES: CourseModule[] = [
   {
-    title: "Foundations · a shopping app",
+    title: "Days 1–8 · Foundations",
     flow: ["Client", "Server", "Database"],
     lessons: [
-      ["What is system design? The last pair of shoes", "6:19"],
-      ["How an app works: from a tap to a saved cart", "6:49"],
-      ["Why applications slow down", "0:00"],
-      ["Load balancing", "0:00"],
-      ["Database foundations", "0:00"],
-      ["Caching and content delivery", "0:00"],
-      ["Replication and sharding", "0:00"],
+      ["What is system design?", "6:19"],
+      ["How does an application work?", "6:49"],
+      ["Why do applications slow down?", "6:32"],
+      ["Load balancing and multiple servers", "5:52"],
+      ["Database foundations", "6:00"],
+      ["Caching and content delivery", "6:08"],
+      ["Replication, sharding and consistency", "6:05"],
       ["Queues and background work", "0:00"],
     ],
   },
   {
-    title: "Interview practice · worked designs",
+    title: "Days 9–16 · Interview problems",
     flow: ["Clarify", "Design", "Trade-offs"],
     lessons: [
-      ["The interview framework", "0:00"],
-      ["Reliability and overload", "0:00"],
-      ["Design a notification service", "0:00"],
-      ["Design a social news feed", "0:00"],
-      ["Design a ticket-booking system", "0:00"],
-      ["Design a chat application", "0:00"],
+      ["Your system design interview framework", "0:00"],
+      ["Reliability and handling overload", "5:09"],
+      ["Design a notification system", "0:00"],
+      ["Design a social media feed", "4:48"],
+      ["Design a ticket booking system", "0:00"],
+      ["Design a chat system", "0:00"],
       ["Design a video streaming system", "0:00"],
       ["Revision: design a whole system from scratch", "0:00"],
     ],
   },
   {
-    title: "Introduction to AI system design",
+    title: "Days 17–21 · AI system design",
     flow: ["Question", "Retrieve", "Model"],
     lessons: [
-      ["Design a basic AI assistant", "0:00"],
-      ["RAG: answering from documents", "0:00"],
-      ["AI serving: tokens, latency and cost", "0:00"],
-      ["AI quality and safety", "0:00"],
-      ["Capstone: a document-based AI assistant", "0:00"],
+      ["Design a simple AI assistant", "0:00"],
+      ["Build the architecture for a RAG assistant", "0:00"],
+      ["AI latency, cost and model choices", "0:00"],
+      ["AI safety, quality and data access", "0:00"],
+      ["AI system design capstone", "0:00"],
     ],
   },
 ];
 
-/** The lessons that exist, by lesson id ("module-lesson", zero-based). Every other lesson is coming soon. */
-export const BUILT_LESSONS = ["0-0", "0-1"];
+/**
+ * The lessons that exist, by lesson id ("module-lesson", zero-based), with the
+ * day each went live in India. Adding a lesson here releases it: use the day it
+ * really goes out, because learners waiting on it have that day and the next to
+ * pass it. Every other lesson is coming soon.
+ */
+export const LESSON_RELEASES: Record<string, string> = {
+  "0-0": "2026-10-31",
+  "0-1": "2026-10-31",
+  "0-2": "2026-11-02",
+  "0-3": "2026-11-02",
+  "0-4": "2026-11-02",
+  "0-5": "2026-11-02",
+  "0-6": "2026-11-02",
+  "1-1": "2026-11-02",
+  "1-3": "2026-11-02",
+};
+export const BUILT_LESSONS = Object.keys(LESSON_RELEASES);
 /** Open to everyone. None: the course overview video is the free part, and every lesson needs a seat. */
 export const FREE_LESSONS: string[] = [];
 
 export type Question =
-  | { type: "mcq" | "timed"; typeLabel: string; topic: string; prompt: string; options: string[]; ans: number }
-  | { type: "multi"; typeLabel: string; topic: string; prompt: string; options: string[]; ans: number[] }
-  | { type: "diagram"; typeLabel: string; topic: string; prompt: string; ans: number }
+  | { type: "mcq" | "timed" | "multi"; typeLabel: string; topic: string; prompt: string; options: string[] }
+  | { type: "diagram"; typeLabel: string; topic: string; prompt: string }
   | { type: "order"; typeLabel: string; topic: string; prompt: string; items: string[]; start: number[] }
   | { type: "text"; typeLabel: string; topic: string; prompt: string };
 
-/** The pre- and post-assessment ask the same six questions, one of each type. */
+/**
+ * The final assessment: six questions, one of each type. These reach every
+ * browser, so they carry no answers: those are in final.ts, on the server, and
+ * the steps of the "order" question are listed shuffled.
+ */
 export const QUESTIONS: Question[] = [
-  { type: "mcq", typeLabel: "Multiple choice", topic: "Scaling", prompt: "A service gets 10× more reads than writes. What helps most first?", options: ["Add read replicas and a cache", "Shard the database by user", "Add a message queue in front", "Move to one bigger server"], ans: 0 },
-  { type: "multi", typeLabel: "Multi-select", topic: "Load balancing", prompt: "Which make app servers safe to add or remove behind a load balancer? Pick all that apply.", options: ["Sessions in a shared store", "Uploaded files on local disk", "An in-memory counter on each server", "No user state kept on the server"], ans: [0, 3] },
-  { type: "diagram", typeLabel: "Pick the architecture", topic: "Availability", prompt: "Which design keeps taking orders if one database node dies?", ans: 1 },
-  { type: "order", typeLabel: "Order the steps", topic: "Request flow", prompt: "Put a read that misses the cache in order.", items: ["DNS lookup", "Load balancer", "App server", "Cache (miss)", "Database"], start: [1, 3, 0, 4, 2] },
+  { type: "mcq", typeLabel: "Multiple choice", topic: "Scaling", prompt: "A service gets 10× more reads than writes. What helps most first?", options: ["Add read replicas and a cache", "Shard the database by user", "Add a message queue in front", "Move to one bigger server"] },
+  { type: "multi", typeLabel: "Multi-select", topic: "Load balancing", prompt: "Which make app servers safe to add or remove behind a load balancer? Pick all that apply.", options: ["Sessions in a shared store", "Uploaded files on local disk", "An in-memory counter on each server", "No user state kept on the server"] },
+  { type: "diagram", typeLabel: "Pick the architecture", topic: "Availability", prompt: "Which design keeps taking orders if one database node dies?" },
+  { type: "order", typeLabel: "Order the steps", topic: "Request flow", prompt: "Put a read that misses the cache in order.", items: ["Load balancer", "Cache (miss)", "DNS lookup", "Database", "App server"], start: [0, 1, 2, 3, 4] },
   { type: "text", typeLabel: "Short answer", topic: "Trade-offs", prompt: "In a sentence or two: during a network partition, what does CAP make you choose between?" },
-  { type: "timed", typeLabel: "Timed · 30 seconds", topic: "Estimation", prompt: "1 crore daily users each make 20 requests. Roughly what’s the average requests per second?", options: ["About 230", "About 2,300", "About 23,000", "About 2,30,000"], ans: 1 },
+  { type: "timed", typeLabel: "Timed · 30 seconds", topic: "Estimation", prompt: "1 crore daily users each make 20 requests. Roughly what’s the average requests per second?", options: ["About 230", "About 2,300", "About 23,000", "About 2,30,000"] },
 ];
 
 /** Seconds allowed for the timed question. */
@@ -117,14 +136,8 @@ export interface Notif {
   go: NotifTarget;
 }
 
-/** The inbox's messages. Until there is a backend to send them, these are the examples the design ships with. */
-export const NOTIFICATIONS: Notif[] = [
-  { id: 1, type: "reply", title: "Klymb team replied", body: "“If I have auto-scaling, why pre-scale at all?”", time: "12 min ago", group: "Today", unread: true, go: "player" },
-  { id: 2, type: "streak", title: "Your 6-day streak is waiting", body: "One lesson step keeps it.", time: "2 h ago", group: "Today", unread: true, go: "progress" },
-  { id: 3, type: "badge", title: "Badge earned: First pass", body: "First lesson check passed.", time: "Yesterday", group: "Earlier", unread: false, go: "progress" },
-  { id: 4, type: "module", title: "Day 3 is out", body: "Why applications slow down · 15 min", time: "2 days ago", group: "Earlier", unread: false, go: "course" },
-  { id: 5, type: "assess", title: "Your retake is open", body: "Day 1 rewatched. Try again.", time: "4 days ago", group: "Earlier", unread: false, go: "player" },
-];
+/** The inbox's messages. Empty until there is a backend to send real ones: a learner must never read a made-up reply. */
+export const NOTIFICATIONS: Notif[] = [];
 
 /** The welcome screen: what the course gives you, before Day 1. [title, detail] */
 export const WELCOME: [string, string][] = [

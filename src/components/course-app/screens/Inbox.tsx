@@ -50,7 +50,7 @@ export function Notifications({ s, act }: { s: CourseState; act: Act }) {
           icon="bell"
           titleClass="text-[28px] tracking-[-0.03em]"
           title="All caught up"
-          body="Replies, reminders and new days show up here."
+          body="There’s nothing new right now."
           action={<button type="button" onClick={back} className="sd-btn sd-btn-primary h-11 gap-2">Back to learning<Icon name="arrowR" size={16} /></button>}
         />
       )}

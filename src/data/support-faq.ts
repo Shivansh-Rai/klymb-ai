@@ -1,8 +1,10 @@
 import { HIDE_MONEY } from "@/lib/site-status";
 import { enrolment } from "@/data/config";
+import { sdRefund } from "@/data/legal";
 import { refundConditions, refundTiming } from "@/data/program";
 import { LAUNCH_OFFER, offerOpen } from "@/lib/offer";
 import { formatINR } from "@/lib/format";
+import { SD_REFERRAL } from "@/lib/sd-offer";
 import { allFree } from "@/data/tracks";
 
 export interface SupportAnswer {
@@ -97,12 +99,23 @@ export function supportTopics(): SupportTopic[] {
       ],
     },
     {
+      id: "system-design",
+      title: "System Design course",
+      audience: "both",
+      items: [
+        { id: "sd-open", question: "How do I open my System Design course?", keywords: ["system", "design", "course", "open", "bought", "purchased", "login", "dashboard"], answer: ["Log in with the Google account you paid with and the course opens straight away."], action: { label: "Open the course", href: "/learn/system-design" } },
+        { id: "sd-paid", question: "I paid, but it asks me to buy again", keywords: ["system", "design", "paid", "payment", "buy", "again", "access", "purchased"], answer: ["You are probably signed in with a different Google account. Log out in Profile and sign in with the one you paid with.", "If it still asks, send your payment ID to the team below."] },
+        { id: "sd-next", question: "When does the next lesson open?", keywords: ["system", "design", "lesson", "next", "midnight", "locked", "tomorrow"], answer: ["One lesson a day. Pass today's lesson check and the next one opens at midnight India time.", "If the next lesson isn't out yet, those days don't count as missed."] },
+        { id: "sd-refund", question: "How do I get my System Design fee back?", keywords: ["system", "design", "refund", "fee", "back", "money", "friends", "refer"], answer: [sdRefund.headline, `Or get ${SD_REFERRAL.friends} friends to buy within ${SD_REFERRAL.days} days of your purchase. Your fee comes back and you keep the course.`], action: { label: "Read the conditions", href: "/refund-policy" } },
+      ],
+    },
+    {
       id: "account",
       title: "Sign-in and devices",
       audience: "learner",
       items: [
         { id: "other-device", question: "It says I'm signed in on another device", keywords: ["device", "phone", "laptop", "another"], answer: ["Your account works on one device at a time. On the new device, tap Continue on this device: the old one is signed out automatically.", "You can switch up to 5 times a day. If you hit that, ask the team below."] },
-        { id: "cant-signin", question: "I can't sign in", keywords: ["signin", "google", "account", "access"], answer: ["Use Continue with Google with the exact email you registered with. A different Google account won't find your place."], action: { label: "Sign in", href: "/learn/login" } },
+        { id: "cant-signin", question: "I can't sign in", keywords: ["signin", "google", "account", "access"], answer: ["Use Continue with Google with the exact email you paid or registered with. A different Google account won't find your place."], action: { label: "Sign in", href: "/learn/login" } },
         { id: "change-email", question: "Can I change my email?", keywords: ["email", "change", "different", "account"], answer: ["Your place is tied to the email you registered with. If you need it moved to another email, send a message to the team below."] },
       ],
     },

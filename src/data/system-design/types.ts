@@ -48,7 +48,7 @@ export interface BuildTask {
 }
 
 /** The parts a learner can place on the design canvas. */
-export type CanvasPart = "client" | "lb" | "server" | "cache" | "database" | "queue" | "worker" | "storage" | "cdn";
+export type CanvasPart = "client" | "lb" | "server" | "cache" | "database" | "queue" | "worker" | "storage" | "cdn" | "session" | "replica" | "feed";
 
 /**
  * "Draw it": a blank board. The learner places parts, connects them with

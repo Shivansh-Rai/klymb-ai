@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
-  SD_OFFER, campaignOf, claimProblems, countdownParts, inAppBrowser, linkedInProblem, mobileOf, offPercent, offerPath, sdOfferOpen, sdOfferState, sdPriceFor, sdPriceNow, signInFailedPath,
+  SD_OFFER, campaignOf, claimProblems, countdownParts, inAppBrowser, linkedInProblem, mobileOf, offPercent, offerPath, sdOfferEnd, sdOfferOpen, sdOfferState, sdPriceFor, sdPriceNow, signInFailedPath,
 } from "../src/lib/sd-offer";
 
 const DURING = new Date("2026-11-08T23:59:59+05:30");
@@ -12,6 +12,11 @@ test("₹499 runs to the end of 8 November IST, and the end itself is the full p
   assert.equal(sdPriceNow(DURING), 499);
   assert.equal(sdOfferOpen(AFTER), false);
   assert.equal(sdPriceNow(AFTER), 1999);
+});
+
+test("the home page names the offer's real last day", () => {
+  const lastDay = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(sdOfferEnd() - 1);
+  assert.equal(SD_OFFER.endsLabel, lastDay);
 });
 
 test("a locked price is kept after the offer, and never raises today's", () => {
@@ -71,6 +76,8 @@ test("Google brings a claim back to the offer, with its campaign", () => {
   assert.equal(offerPath("sd-launch-1"), "/system-design?utm_campaign=sd-launch-1");
   assert.equal(offerPath(null, true), "/system-design?claim=1");
   assert.equal(offerPath("sd-launch-1", true), "/system-design?claim=1&utm_campaign=sd-launch-1");
+  assert.equal(offerPath(null, true, "ABCD2345"), "/system-design?claim=1&ref=ABCD2345");
+  assert.equal(offerPath("sd-launch-1", false, "ABCD2345"), "/system-design?utm_campaign=sd-launch-1&ref=ABCD2345");
 });
 
 test("a campaign tag is short and plain, or dropped", () => {

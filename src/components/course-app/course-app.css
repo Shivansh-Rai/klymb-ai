@@ -197,6 +197,11 @@
   .sd-roll-in { animation: sd-roll-in .7s cubic-bezier(.2, 1.5, .4, 1) both; }
   .sd-a-flame-jump { animation: sd-flame-jump .9s .15s both; }
   .sd-a-ring { animation: sd-ring .9s .2s both; }
+  /* A press-and-hold let go too soon. Two names so each tap restarts the shake. */
+  @keyframes sd-shake { 0%, 100% { transform: none } 25% { transform: translateX(-6px) } 50% { transform: translateX(5px) } 75% { transform: translateX(-3px) } }
+  @keyframes sd-shake-b { 0%, 100% { transform: none } 25% { transform: translateX(-6px) } 50% { transform: translateX(5px) } 75% { transform: translateX(-3px) } }
+  .sd-a-shake { animation: sd-shake .35s ease-in-out; }
+  .sd-a-shake-b { animation: sd-shake-b .35s ease-in-out; }
 
   @media (prefers-reduced-motion: reduce) {
     .sd-app *, .sd-app *::before, .sd-app *::after { animation: none !important; transition: none !important; }

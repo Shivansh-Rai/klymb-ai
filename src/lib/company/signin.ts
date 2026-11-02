@@ -32,7 +32,8 @@ export async function requestSignInCode(rawEmail: unknown): Promise<RequestResul
 
 async function deliverCode(email: string, code: string) {
   const mail = signInCodeEmail({ code, minutes: CODE_TTL_MINUTES, siteUrl: site.url, supportEmail: grievance.email });
-  const result = await sendMail({ to: { email }, ...mail });
+  // No idempotency key: every code is new, and a resent code must go out again.
+  const result = await sendMail({ to: { email }, ...mail, kind: "company.signin_code" });
   if (result.ok) return;
   if (result.reason === "not configured" && process.env.NODE_ENV !== "production") {
     // Local development only, where email isn't set up. Never in production.

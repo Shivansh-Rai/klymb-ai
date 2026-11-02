@@ -5,12 +5,14 @@ import { ArrowRight, Briefcase, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { courseSignIn } from "@/app/(course)/learn/system-design/actions";
 import { offerSignIn, offerSwitchAccount } from "@/app/(course)/system-design/actions";
 import { BUILT_LESSONS } from "@/data/system-design/course-app";
+import { FINAL_MARK } from "@/lib/sd-pace";
 import { LESSON_COUNT } from "@/lib/course-app";
 import { formatINR } from "@/lib/format";
 import { loadCheckout, type RazorpaySuccess } from "@/lib/razorpay-checkout";
-import { claimProblems, countdownParts, linkedInProblem, type SdOfferState, type SdRole } from "@/lib/sd-offer";
+import { SD_REFERRAL, claimProblems, countdownParts, linkedInProblem, referralCodeProblem, type SdOfferState, type SdRole } from "@/lib/sd-offer";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -19,7 +21,7 @@ const ROLES: { key: SdRole; label: string; Icon: typeof Briefcase }[] = [
   { key: "working", label: "Working professional", Icon: Briefcase },
 ];
 
-interface Claim { name: string; phone: string; linkedin: string; role: SdRole | "" }
+interface Claim { name: string; phone: string; linkedin: string; role: SdRole | ""; ref: string }
 
 /** The form, kept for the trip to Google and back: this tab only, and gone once read. */
 const DRAFT = "klymb.sd-claim";
@@ -72,9 +74,9 @@ function Countdown({ endsAt, serverNow, onEnd }: { endsAt: number; serverNow: nu
  * first, for the email, and comes back here with the form as they left it.
  * Signed in, it saves their answers and opens Razorpay.
  */
-export function ClaimCard({ offer, email, name: startName, phone: startPhone, linkedin: startLinkedin, role: startRole, campaign, resume, signInFailed, inApp }: {
+export function ClaimCard({ offer, email, name: startName, phone: startPhone, linkedin: startLinkedin, role: startRole, campaign, referral, resume, signInFailed, inApp }: {
   offer: SdOfferState; email: string | null; name: string; phone: string; linkedin: string; role: SdRole | ""; campaign: string | null;
-  resume: boolean; signInFailed: boolean; inApp: boolean;
+  referral: { code: string; invitedBy: string } | null; resume: boolean; signInFailed: boolean; inApp: boolean;
 }) {
   const router = useRouter();
   const signIn = useRef<HTMLFormElement>(null);
@@ -83,6 +85,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
   const [phone, setPhone] = useState(startPhone);
   const [linkedin, setLinkedin] = useState(startLinkedin);
   const [role, setRole] = useState<SdRole | "">(startRole);
+  const [ref, setRef] = useState(referral?.code ?? "");
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(signInFailed ? "Google sign-in did not complete. Please try again." : "");
@@ -93,6 +96,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
   const badName = tried && missing.includes("your name");
   const badPhone = tried && missing.includes("a 10-digit mobile number");
   const badLinkedin = tried ? linkedInProblem(linkedin) : null;
+  const badRef = tried ? referralCodeProblem(ref) : null;
   const fail = (message: string) => { setBusy(false); setError(message); };
 
   async function pay(details: Claim) {
@@ -143,6 +147,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
     setPhone(draft.phone);
     setLinkedin(draft.linkedin);
     setRole(draft.role);
+    setRef(draft.ref);
     if (email && resume) void pay(draft);
   });
 
@@ -155,8 +160,8 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
   function claim(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (missing.length || linkedInProblem(linkedin)) return setTried(true);
-    const details = { name, phone, linkedin, role };
+    if (missing.length || linkedInProblem(linkedin) || referralCodeProblem(ref)) return setTried(true);
+    const details = { name, phone, linkedin, role, ref };
     if (email) return void pay(details);
     // Google refuses to sign anyone in from an app's own browser, so don't send them to its error.
     if (inApp) return setBlocked(true);
@@ -196,6 +201,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
         </div>
 
         <div className="flex flex-col gap-3.5 p-[18px] lg:p-6 lg:pb-[22px]">
+          {referral && <p className="m-0 rounded-[10px] bg-[rgba(131,5,11,.08)] px-3 py-2.5 text-sm font-bold text-[#83050b]">{referral.invitedBy} invited you.</p>}
           <form onSubmit={claim} noValidate className="flex flex-col gap-3.5">
             <label className="flex min-w-0 flex-col gap-1.5">
               <span className={label}>Full name</span>
@@ -204,13 +210,17 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
             <div className="relative flex flex-col">
               <label className="flex min-w-0 flex-col gap-1.5">
                 <span className={label}>Phone</span>
-                <input type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" maxLength={14} aria-invalid={badPhone} className={clsx(input, "pl-[58px]", badPhone ? "border-[#83050b]" : "border-transparent")} />
+                <input type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" maxLength={16} aria-invalid={badPhone} className={clsx(input, "pl-[58px]", badPhone ? "border-[#83050b]" : "border-transparent")} />
               </label>
               <span aria-hidden="true" className="pointer-events-none absolute bottom-[15px] left-3.5 font-bold text-[#605d5d]">+91</span>
             </div>
             <label className="flex min-w-0 flex-col gap-1.5">
               <span className={label}>LinkedIn profile <span className="font-normal text-[#605d5d]">(optional)</span></span>
               <input type="url" inputMode="url" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="linkedin.com/in/your-name" autoComplete="url" autoCapitalize="none" maxLength={200} aria-invalid={!!badLinkedin} className={clsx(input, badLinkedin ? "border-[#83050b]" : "border-transparent")} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className={label}>Referral code <span className="font-normal text-[#605d5d]">(optional)</span></span>
+              <input type="text" value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} placeholder="From a friend's link" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={20} aria-invalid={!!badRef} className={clsx(input, badRef ? "border-[#83050b]" : "border-transparent")} />
             </label>
             <div role="radiogroup" aria-label="I am a" className="flex flex-col gap-1.5">
               <span className={label}>I am a</span>
@@ -242,6 +252,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
             </div>
             {tried && missing.length > 0 && <p role="alert" className="m-0 text-[13px] font-semibold text-[#83050b]">Add {missing.join(", ")}.</p>}
             {badLinkedin && <p role="alert" className="m-0 text-[13px] font-semibold text-[#83050b]">{badLinkedin}</p>}
+            {badRef && <p role="alert" className="m-0 text-[13px] font-semibold text-[#83050b]">{badRef}</p>}
             {error && <p role="alert" className="m-0 text-[13px] font-semibold text-[#83050b]">{error}</p>}
             {blocked && (
               <div role="alert" className="flex flex-col gap-2 rounded-[10px] bg-[rgba(131,5,11,.08)] p-3 text-[13px] leading-[1.4] font-semibold text-[#83050b]">
@@ -255,11 +266,16 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
           </form>
           <form ref={signIn} action={offerSignIn} hidden>
             <input type="hidden" name="campaign" value={campaign ?? ""} />
+            <input type="hidden" name="ref" value={ref} />
           </form>
 
           <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
             <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">100%</span>
-            <span>Complete the course end to end and get 100% of your money back. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
+            <span><b>100% back if you finish on schedule.</b> One lesson a day, no missed days, and {FINAL_MARK}% or higher on the final assessment. Start any day you like. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
+          </p>
+          <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
+            <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">{SD_REFERRAL.friends} friends</span>
+            <span>Get {SD_REFERRAL.friends} friends to buy within {SD_REFERRAL.days} days of your purchase and get 100% of your money back. You keep the course. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
           </p>
           <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
             <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">{BUILT_LESSONS.length}/{LESSON_COUNT}</span>
@@ -268,10 +284,14 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
           {email ? (
             <form action={offerSwitchAccount} className="text-xs leading-[1.4] text-[#605d5d]">
               <input type="hidden" name="campaign" value={campaign ?? ""} />
+              <input type="hidden" name="ref" value={ref} />
               Buying as <span className="font-bold break-all text-ink">{email}</span>. <button type="submit" className="cursor-pointer border-0 bg-transparent p-0 underline underline-offset-2">Use a different account</button>
             </form>
           ) : (
-            <p className="m-0 text-xs leading-[1.4] text-[#605d5d]">Next you&apos;ll sign in with Google. That account holds your seat.</p>
+            <form action={courseSignIn} onSubmit={(e) => { if (inApp) { e.preventDefault(); setBlocked(true); } }} className="text-xs leading-[1.4] text-[#605d5d]">
+              <input type="hidden" name="lesson" value="" />
+              Next you&apos;ll sign in with Google. That account holds your seat. <button type="submit" className="cursor-pointer border-0 bg-transparent p-0 font-bold text-ink underline underline-offset-2">Already bought? Sign in</button>
+            </form>
           )}
         </div>
       </div>

@@ -43,8 +43,12 @@ test("resend limits: one per person per 10 minutes, 50 per HR per hour", () => {
 
 test("mail: the From address is always Klymb's; only the display name can change, and it defaults to Klymb.ai", () => {
   const mail = read("src/lib/mail.ts");
-  assert.match(mail, /fromName = "Klymb\.ai"/);
+  assert.match(mail, /const SENDER_NAME = "Klymb\.ai"/);
+  assert.match(mail, /fromName = SENDER_NAME/);
+  // Brevo and ABT-Mailer both send the same display name.
   assert.match(mail, /sender: \{ email: from, name: fromName \}/);
+  assert.match(mail, /from: \{ email: from, name: fromName \}/);
+  assert.doesNotMatch(mail, /name: SENDER_NAME \}/);
 });
 
 test("mail: the company invite uses the checked color, the escaped logo and the safe sender name", () => {

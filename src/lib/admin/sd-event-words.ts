@@ -15,6 +15,7 @@ const SCREENS: Record<string, string> = {
   home: "Went to Home",
   course: "Browsed the list of days",
   progress: "Checked their progress",
+  refer: "Opened the Refer tab",
   profile: "Opened their profile",
   notifs: "Opened notifications",
   player: "Opened the lesson",

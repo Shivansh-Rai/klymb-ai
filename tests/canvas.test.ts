@@ -43,14 +43,13 @@ test("every model connection has its reason, in both languages", () => {
   assert.equal(gradeBoard(day2, day2.model).score, 3, "the model passes its own check");
 });
 
-test("Draw it sits after Build it, counts in the numbering, and must be done to finish the day", () => {
+test("Draw it sits after Build it, counts in the numbering, and is optional", () => {
   const steps = lessonSteps(home(), "0-0", LESSON_DAYS["0-0"]).map((s) => s.key);
   assert.deepEqual(steps.slice(steps.indexOf("build"), steps.indexOf("build") + 2), ["build", "draw"]);
   const parts = assessmentParts("0-1");
   assert.equal(parts.first.draw, parts.first.build + 1);
   assert.equal(parts.first.design, parts.first.draw + 1);
   assert.equal(parts.total, 11, "Day 2: 5 checks, build, draw, design, 3 follow-ups");
-  const rest = { watched: true, post: [0, 0, 0, 0, 0], built: 0, follow: [true, true, true] };
-  assert.equal(flowDone(updateLesson(home(), "0-0", rest, NOW), "0-0"), false);
-  assert.equal(flowDone(updateLesson(home(), "0-0", { ...rest, drawn: { score: 2, of: 2 } }, NOW), "0-0"), true);
+  const passed = { watched: true, post: [0, 0, 0, 0, 0] };
+  assert.equal(flowDone(updateLesson(home(), "0-0", passed, NOW), "0-0"), true, "the drawing never holds the day back");
 });

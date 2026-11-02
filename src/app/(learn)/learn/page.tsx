@@ -35,11 +35,13 @@ export default async function LearnHomePage() {
         <Wordmark className="text-2xl" />
         <h1 className="display mt-8 text-3xl">You are signed in, but not enrolled yet</h1>
         <p className="mt-3 text-muted">
-          We could not find a cohort place for <strong className="text-ink">{state.email}</strong>. If you registered with a
-          different email, sign in with that one: otherwise write to {contact.email} and we will sort it out.
+          We could not find a course or cohort place for <strong className="text-ink">{state.email}</strong>. If you paid or
+          registered with a different Google account, sign out and use that one: otherwise write to {contact.email} and we
+          will sort it out.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <ButtonLink href="/register?track=project-manager" arrow>Register for the cohort</ButtonLink>
+          <ButtonLink href="/system-design" arrow>See System Design</ButtonLink>
+          <ButtonLink href="/register?track=project-manager" variant="secondary">Register for the cohort</ButtonLink>
           <form action={signOutLearner}>
             <button type="submit" className="rounded-lg border border-line/50 px-5 py-3 text-sm font-bold hover:bg-ink hover:text-paper">
               Sign out

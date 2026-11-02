@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import type { Lang, Question } from "@/data/system-design/types";
 import { PASS_MARK, assessmentParts, checkPct, pad, passed, submitCheck, updateLesson, type CourseState, type LessonProgress } from "@/lib/course-app";
+import type { SdProgress } from "@/lib/sd-pace";
 import { shuffledOrder } from "@/lib/shuffle";
 import { Icon } from "../icons";
 import { stagger, useCountUp } from "../ui";
@@ -14,7 +15,7 @@ const PASS = Math.round(PASS_MARK * 100);
 const UI = {
   en: {
     title: "Check what you learned",
-    count: (n: number) => `${n} questions`, time: "About 15 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
+    count: (n: number) => `${n} questions`, time: "About 5 min", mark: `${PASS}% to pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Answers at the end", start: "Start assessment", retake: "Retake assessment",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${n} of ${t} correct`,
     passed: "Passed", passedBody: (next: boolean) => (next ? `Next lesson unlocked. Pass mark is ${PASS}%.` : `Pass mark is ${PASS}%.`),
     failed: "Not passed yet", failedBody: `You need ${PASS}% to unlock the next lesson. Rewatch the lesson, then retake the assessment.`,
@@ -25,7 +26,7 @@ const UI = {
   },
   hi: {
     title: "Dekho kitna samjha",
-    count: (n: number) => `${n} sawaal`, time: "Lagbhag 15 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
+    count: (n: number) => `${n} sawaal`, time: "Lagbhag 5 min", mark: `${PASS}% se pass`, passMark: (n: number) => `Pass mark ${n}%`, answersEnd: "Jawab end mein", start: "Assessment shuru karo", retake: "Assessment dobara do",
     scenario: "Scenario", skip: "Skip", next: "Next", finish: "Finish", of: (n: number, t: number) => `${t} mein se ${n} sahi`,
     passed: "Pass", passedBody: (next: boolean) => (next ? `Agla lesson khul gaya. Pass mark ${PASS}% hai.` : `Pass mark ${PASS}% hai.`),
     failed: "Abhi pass nahi", failedBody: `Agla lesson kholne ke liye ${PASS}% chahiye. Lesson dobara dekho, phir assessment do.`,
@@ -94,6 +95,39 @@ function Questions({ questions, lang, idx, busy, error, onIdx, onDone }: { quest
   );
 }
 
+/** Every question with the learner's pick, the best answer and why. */
+export function Answers({ questions, lang, picks }: { questions: Question[]; lang: Lang; picks: number[] }) {
+  const ui = UI[lang];
+  return (
+    <section aria-label={ui.answers}>
+      <h6 className="sd-h6 mb-2">{ui.answers}</h6>
+      <ol className="m-0 flex list-none flex-col border-t-2 border-sd-divider p-0">
+        {questions.map((q, k) => {
+          const mine = q.choices[picks[k]];
+          const best = q.choices.find((c) => c.best)!;
+          const good = !!mine?.best;
+          return (
+            <li key={q.id} className="sd-a-in grid grid-cols-[28px_minmax(0,1fr)_28px] items-start gap-3 border-b border-sd-divider py-4" style={stagger(k, 70, 600)}>
+              <span className="text-[13px] leading-7 font-extrabold text-sd-accent">{pad(k + 1)}</span>
+              <div className="flex min-w-0 flex-col gap-2">
+                <span className="text-base leading-[1.3] font-extrabold text-pretty">{q.prompt}</span>
+                {!good && <span className="text-[13px] text-sd-n-700"><b>{ui.yours}</b> · {mine ? mine.text : ui.skipped}</span>}
+                <div className="flex flex-col gap-1 rounded-lg bg-sd-surface px-3 py-2.5">
+                  <span className="text-sm font-bold text-pretty">{best.text}</span>
+                  <span className="text-[13px] leading-[1.5] text-sd-n-800 text-pretty">{best.why}</span>
+                </div>
+              </div>
+              <span className={clsx("flex size-7 items-center justify-center rounded-lg border-[1.5px]", good ? "border-sd-ink bg-sd-ink text-sd-bg" : "border-sd-divider text-sd-n-600")} aria-label={good ? "Correct" : "Wrong"}>
+                <Icon name={good ? "check" : "x"} size={14} stroke={good ? 3 : 2.5} />
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 /** The score, the verdict, and every question with its answer explained. */
 function Results({ questions, lang, picks, hasNext, children }: { questions: Question[]; lang: Lang; picks: number[]; hasNext: boolean; children: React.ReactNode }) {
   const ui = UI[lang];
@@ -123,37 +157,12 @@ function Results({ questions, lang, picks, hasNext, children }: { questions: Que
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">{children}</div>
       </div>
 
-      <section aria-label={ui.answers}>
-        <h6 className="sd-h6 mb-2">{ui.answers}</h6>
-        <ol className="m-0 flex list-none flex-col border-t-2 border-sd-divider p-0">
-          {questions.map((q, k) => {
-            const mine = q.choices[picks[k]];
-            const best = q.choices.find((c) => c.best)!;
-            const good = !!mine?.best;
-            return (
-              <li key={q.id} className="sd-a-in grid grid-cols-[28px_minmax(0,1fr)_28px] items-start gap-3 border-b border-sd-divider py-4" style={stagger(k, 70, 600)}>
-                <span className="text-[13px] leading-7 font-extrabold text-sd-accent">{pad(k + 1)}</span>
-                <div className="flex min-w-0 flex-col gap-2">
-                  <span className="text-base leading-[1.3] font-extrabold text-pretty">{q.prompt}</span>
-                  {!good && <span className="text-[13px] text-sd-n-700"><b>{ui.yours}</b> · {mine ? mine.text : ui.skipped}</span>}
-                  <div className="flex flex-col gap-1 rounded-lg bg-sd-surface px-3 py-2.5">
-                    <span className="text-sm font-bold text-pretty">{best.text}</span>
-                    <span className="text-[13px] leading-[1.5] text-sd-n-800 text-pretty">{best.why}</span>
-                  </div>
-                </div>
-                <span className={clsx("flex size-7 items-center justify-center rounded-lg border-[1.5px]", good ? "border-sd-ink bg-sd-ink text-sd-bg" : "border-sd-divider text-sd-n-600")} aria-label={good ? "Correct" : "Wrong"}>
-                  <Icon name={good ? "check" : "x"} size={14} stroke={good ? 3 : 2.5} />
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <Answers questions={questions} lang={lang} picks={picks} />
     </div>
   );
 }
 
-/** Sends an attempt to be graded. The answers come back with it, or null when it couldn't be reached. */
+/** Sends an attempt to be graded. The answers come back with it, or what the server said, or nothing when it couldn't be reached. */
 async function grade(lesson: string, picks: number[]) {
   const res = await fetch("/api/sd/check", {
     method: "POST",
@@ -161,7 +170,8 @@ async function grade(lesson: string, picks: number[]) {
     body: JSON.stringify({ lesson, picks: Array.from(picks, (p) => p ?? null) }),
   }).catch(() => null);
   const out = await res?.json().catch(() => null);
-  return res?.ok && out?.review ? (out.review as Record<Lang, Question[]>) : null;
+  if (res?.ok && out?.review) return { review: out.review as Record<Lang, Question[]>, progress: (out.progress ?? null) as SdProgress | null };
+  return { refused: typeof out?.error === "string" ? (out.error as string) : null };
 }
 
 /**
@@ -186,10 +196,11 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
   const finish = async (picks: number[]) => {
     setBusy(true);
     setError("");
-    const review = await grade(id, picks);
+    const out = await grade(id, picks);
     setBusy(false);
-    if (!review) return setError(ui.noGrade);
-    act((q) => ({ ...updateLesson(submitCheck(q, id, review[q.lang], picks), id, { review }), checkStage: "result", checkBusy: false }));
+    const { review, progress, refused } = out;
+    if (!review) return setError(refused ?? ui.noGrade);
+    act((q) => ({ ...updateLesson(submitCheck({ ...q, progress: progress ?? q.progress }, id, review[q.lang], picks), id, { review }), checkStage: "result", checkBusy: false }));
   };
 
   if (stage === "q") {
@@ -232,7 +243,7 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
     <div className="flex flex-col gap-3.5 rounded-xl bg-sd-surface p-[18px]">
       <h3 className="m-0 text-[28px] leading-none tracking-[-0.035em] text-balance lg:text-[38px]">{ui.title}</h3>
       <div className="flex flex-wrap gap-2">
-        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count(assessmentParts(id, s.lang).total)}</span>
+        <span className="sd-tag sd-tag-neutral rounded-md">{ui.count(assessmentParts(id, s.lang).sizes.prove)}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.time}</span>
         <span className="sd-tag sd-tag-accent rounded-md">{ui.mark}</span>
         <span className="sd-tag sd-tag-neutral rounded-md">{ui.answersEnd}</span>

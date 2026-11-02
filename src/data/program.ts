@@ -202,7 +202,7 @@ export const faqs: Faq[] = [
   {
     question: "Will you try to sell me another course?",
     answer:
-      "No. There is no advanced program or mastermind to upsell. The track you pick is the whole product, and if you complete it the fee comes back.",
+      "No. There is no advanced program or mastermind to upsell. The track you pick is complete on its own, and if you complete it the fee comes back. System Design is a separate course, there only if you want it.",
   },
   {
     question: "What is the refund policy?",
@@ -228,7 +228,8 @@ export const footerLinks = {
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Cookie Policy", href: "/cookies" },
     { label: "Terms", href: "/terms" },
-    ...(HIDE_MONEY ? [] : [{ label: "Refund Policy", href: "/refund-policy" }]),
+    // Stays with HIDE_MONEY on: System Design is on sale, and its refund rests on this page.
+    { label: "Refund Policy", href: "/refund-policy" },
   ],
 };
 

@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LearnerLoginForm } from "@/components/learner/LearnerLoginForm";
 import { Wordmark } from "@/components/layout/Wordmark";
-import { getLearnerState } from "@/lib/learner/data";
+import { getLearnerState, redirectCourseBuyer } from "@/lib/learner/data";
+import { inAppBrowser } from "@/lib/sd-offer";
 import { continueOnThisDevice, signOutLearner } from "@/app/(learn)/learn/actions";
 
 export const metadata: Metadata = { title: "Learner sign-in", robots: { index: false, follow: false } };
 
 export default async function LearnerLoginPage({ searchParams }: { searchParams: Promise<{ error?: string; welcome?: string }> }) {
   const { error, welcome } = await searchParams;
+  await redirectCourseBuyer();
   const state = await getLearnerState();
   // Another device holds this learner's slot: stay here and explain, never loop back to /learn.
   const blocked = state.state === "other-device" || error === "device" || error === "takeover-limit";
@@ -60,13 +64,17 @@ export default async function LearnerLoginPage({ searchParams }: { searchParams:
             <>
               <h1 className="display text-2xl">Welcome back</h1>
               <p className="mt-2 text-sm text-muted">
-                Sign in with the email you enrolled with. Not enrolled yet?{" "}
-                <a href="/register?track=project-manager" className="font-semibold underline underline-offset-2">Register for the cohort</a>.
+                Log in with the Google account you paid or registered with. New here? See{" "}
+                <Link href="/system-design" className="font-semibold underline underline-offset-2">System Design</Link> or the{" "}
+                <Link href="/tracks" className="font-semibold underline underline-offset-2">30-day tracks</Link>.
               </p>
             </>
           )}
           {state.state !== "other-device" && (
-            <LearnerLoginForm error={error && !blocked ? "Google sign-in did not complete. Please try again." : undefined} />
+            <LearnerLoginForm
+              error={error && !blocked ? "Google sign-in did not complete. Please try again." : undefined}
+              inApp={inAppBrowser((await headers()).get("user-agent") ?? "")}
+            />
           )}
         </div>
       </div>

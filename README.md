@@ -227,6 +227,10 @@ claimed during the offer keeps its price.
 | What of the course reaches a browser | `src/lib/sd-lessons.ts` |
 | Grades a lesson check | `src/app/api/sd/check` |
 | The refund terms | `sdRefund` in `src/data/legal.ts`, shown on `/refund-policy` and `/terms` |
+| One day at a time, the streak and who keeps the refund | `src/lib/sd-pace.ts`. Change `sdRefund` with it |
+| Release a lesson | Add it to `LESSON_RELEASES` in `src/data/system-design/course-app.ts`, dated the day it goes live: waiting learners get that day and the next |
+| Grades the final assessment | `src/app/api/sd/final`, with the answers in `src/data/system-design/final.ts` |
+| The referral offer: rules, the Refer tab, the buyer's card and sheet | `SD_REFERRAL` in `src/lib/sd-offer.ts`, `src/lib/referrals.ts`, `src/components/course-app/Referral.tsx`, `screens/Refer.tsx` |
 
 **The lock is on the server.** Lesson content lives in
 `src/data/system-design/lessons.ts`, and `/learn/system-design` passes the app only
@@ -240,13 +244,65 @@ the server writes. The final assessment is still graded in the browser and has t
 move to the server before lesson 22 ships, because finishing needs it. Refunds are
 paid by hand from the admin Payments tab after a reviewer has checked the record.
 
-**Deploying.** Run `npm run db:migrate` before the code goes live. Until it has run
-nobody can buy: the order route stops rather than take money it can't record a seat
-for. To give someone free access:
+**Referrals.** Every paid seat gets a link, `/system-design?ref=CODE`. If 3 friends
+buy through it within 10 days of the buyer's purchase, their whole fee comes back and
+they keep the course. The count comes from the friends' active seats, so a friend
+whose seat ends stops counting. `course.enrollments.referral_earned_at` is set once,
+by the third purchase: it sends the buyer one email, and it is what stops
+`recordRefund` from ending their access. Nothing is refunded automatically. The
+Payments tab shows "3/3 friends, refund due", and the refund admin pays it there.
+Buyers from before `SD_REFERRAL.startsAt` get their 10 days from that date, so set it
+to the launch day. The Refer tab shows a buyer their link and progress, and tells
+everyone else why they have none. `/learn/system-design?start=refer` previews a buyer's
+screen from any seat. A browser keeps a code for 14 days (`RememberReferral`), so a
+friend who comes back without the link still counts.
+
+**Deploying.** A production deploy runs `npm run db:migrate` before it builds
+(`scripts/vercel-build.sh`), so merging a migration applies it to the live database.
+If it fails, the build fails and the live version stays up. Migrations run before the
+new code is live, so old code has to keep working with them: add, don't rename or drop.
+To give someone free access:
 
 ```sql
 insert into course.enrollments (email, course, source) values ('name@gmail.com', 'system-design', 'grant');
 ```
+
+## Email
+
+Every mail goes through `sendMail` in `src/lib/mail.ts` with a `kind`. Kinds
+listed in `EMAIL_VIA_ABT_KINDS` go through [ABT-Mailer](https://github.com/manuVrtti/ABT-mailer),
+the team's SES sender, where Klymb is one of the brands; the rest go through
+Brevo. Set `EMAIL_VIA_ABT_KINDS=sd.*` to start, then `*`, and clear it to move
+everything back to Brevo. ABT-Mailer stops mail to addresses that bounced or
+complained, and the idempotency key each mail carries means a retry never sends
+it twice.
+
+| Kind | When | Where |
+| --- | --- | --- |
+| `registration.welcome` | A new registration for a 30-day track | `src/lib/welcome.ts` |
+| `registration.followup.{1,2,3}` | Registered, not paid: 1 hour, 1 day, 3 days | `/api/cron/followups` (hourly) |
+| `payment.receipt`, `sd.receipt` | A payment verifies; the SD one is the receipt and welcome | `src/lib/receipt.ts` |
+| `sd.referral_earned` | A referrer's third friend pays: their refund is earned | `src/lib/referrals.ts` |
+| `sd.followup.{1,2,3}` | Claimed System Design (filled the form, opened Razorpay) but didn't pay: 1 hour, 1 day, 3 days. Any seat ends it | `src/lib/sd-followups.ts`, from the hourly job |
+| `sd.invite` | Pre-registered before payments opened: it's open, your price is held. Off until `SD_INVITE_PREREGISTERED=true` | `src/lib/sd-invites.ts`, from the hourly job |
+| `sd.reminder.lesson`, `sd.reminder.assessment` | 20:00 IST, an enrolled learner passed no lesson check today | `/api/cron/sd-reminders`, `src/lib/sd-reminders.ts` |
+| `support.ticket` | A help request, to the team inbox | `/api/support/ticket` |
+
+**System Design reminders.** A lesson is done when its check passes on the
+server (`course.lesson_checks`). At 20:00 IST a learner who passed nothing today
+gets one mail: the first lesson in course order that is out and not passed,
+or, once every lesson is passed, the final assessment. Daily for three nights,
+then every third day, then weekly; passing a lesson starts the count again.
+Nothing has a date per lesson: shipping a lesson (adding it to
+`BUILT_LESSONS`) is all it takes for caught-up learners to be reminded about it.
+When the final assessment moves to the server, record its pass in
+`course.lesson_checks` with `lesson = 'final'` (`SD_FINAL_ASSESSMENT`) and the
+assessment reminder stops once it is passed. Every reminder has a one-click
+unsubscribe (`/api/sd/unsubscribe`), which sets `enrollments.reminders_off_at`.
+
+`0022_sd_mail.sql` and `0023_sd_followups.sql` add the columns these need; run `npm run db:migrate` first.
+The reminder job is `.github/workflows/sd-reminders.yml`, with `CRON_SECRET` as a
+repository secret, and is safe to re-run by hand.
 
 ## Project structure
 

@@ -77,6 +77,9 @@ function statements(sql: string): string[] {
   return out;
 }
 
+/** Held for the whole run, so two deploys at once take turns instead of racing for the same file. Any fixed number will do. */
+const MIGRATION_LOCK = 7_204_511;
+
 /** Who and where, from a connection string, with the password left out. */
 function announce(url: string) {
   try {
@@ -111,6 +114,15 @@ async function main() {
   await client.connect();
 
   try {
+    // Asked again and again, never waited on: CREATE INDEX CONCURRENTLY waits for
+    // open transactions, and a blocked pg_advisory_lock is one, so the two deadlock.
+    let waiting = false;
+    while (!(await client.query<{ ok: boolean }>("select pg_try_advisory_lock($1) as ok", [MIGRATION_LOCK])).rows[0].ok) {
+      if (!waiting) console.log("Another run is migrating. Waiting for it.");
+      waiting = true;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
     // The ledger has to exist before the first migration can be recorded, and
     // 0001 is what creates the schema it lives in.
     await client.query("create schema if not exists course");

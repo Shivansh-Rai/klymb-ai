@@ -66,11 +66,11 @@ export default function TermsPage() {
       </Section>
       )}
 
-      <Section n="5A." title="System Design" plain="One fee for the whole course, sold before every lesson is out. Finish all of it and you get the fee back.">
+      <Section n="5A." title="System Design" plain="One fee for the whole course, sold before every lesson is out. Finish all of it, or get 3 friends to buy within 10 days, and you get the fee back.">
         <p>
           {sdRefund.earlyAccess} The price is shown before you pay, and you sign in with Google first: the account you pay
-          with is the one that holds your seat, and a seat is for one person. The conditions for getting your fee back are in
-          the <Link href="/refund-policy">Refund Policy</Link>, which forms part of these terms.
+          with is the one that holds your seat, and a seat is for one person. {sdRefund.referral.headline} The conditions for
+          getting your fee back are in the <Link href="/refund-policy">Refund Policy</Link>, which forms part of these terms.
         </p>
       </Section>
 

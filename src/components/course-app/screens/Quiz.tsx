@@ -2,26 +2,32 @@
 
 import clsx from "clsx";
 import { DIAGRAMS, QUESTIONS, TIMED_SECONDS } from "@/data/system-design/course-app";
-import { closeQuiz, isAnswered, nextQuestion, pad, pickOption, setAnswer, type CourseState } from "@/lib/course-app";
+import { closeQuiz, isAnswered, nextQuestion, pad, paceNow, pickOption, setAnswer, type CourseState } from "@/lib/course-app";
+import { FINAL_MARK, FINAL_TRIES } from "@/lib/sd-pace";
 import { Icon } from "../icons";
 import { BackButton, Bar, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 
-export function QuizIntro({ act }: { s: CourseState; act: Act }) {
+export function QuizIntro({ s, act }: { s: CourseState; act: Act }) {
+  const pace = paceNow(s);
+  const left = pace?.finalsLeft ?? FINAL_TRIES;
   const start = () => act((p) => ({ ...p, quiz: { ...p.quiz, stage: "q", idx: 0 }, timeLeft: TIMED_SECONDS }));
   return (
     <div className="sd-a-screen flex flex-1 max-w-[880px] flex-col lg:gap-5">
       <div className="px-3 pt-1 lg:p-0"><BackButton kind="close" onClick={() => act(closeQuiz)} /></div>
       <div className="flex flex-col gap-3.5 px-5 pt-2 lg:contents">
-        <div className="sd-kicker text-sd-accent-700">After Day 21 · Whole course</div>
+        <div className="sd-kicker text-sd-accent-700">The day after Day 21 · Whole course</div>
         <h1 className="m-0 text-[40px] leading-[1.02] tracking-[-0.03em] lg:text-[64px] lg:leading-[0.98] lg:tracking-[-0.04em]">Final assessment</h1>
         <p className="m-0 max-w-[620px] text-[15px] text-pretty text-sd-n-800 lg:text-[17px]">
-          {QUESTIONS.length} questions across the whole course. You’ll see how you did on each topic at the end, with the lesson to rewatch for anything you missed.
+          {QUESTIONS.length} questions across the whole course. {pace?.refund === "on-track" && pace.refundable
+            ? `Score ${FINAL_MARK}% or higher today to keep your refund. You have ${left} ${left === 1 ? "try" : "tries"}, and your best score counts.`
+            : "This try is for practice."} You’ll see how you did on each topic at the end, with the lesson to rewatch for anything you missed.
         </p>
         <div className="flex gap-2">
           <span className="sd-tag sd-tag-neutral">{QUESTIONS.length} questions</span>
           <span className="sd-tag sd-tag-neutral">About 8 min</span>
           <span className="sd-tag sd-tag-neutral">1 timed</span>
+          <span className="sd-tag sd-tag-neutral">{FINAL_MARK}% to pass</span>
         </div>
       </div>
       <div className="mx-5 mt-[22px] border-t-2 border-sd-divider lg:mx-0 lg:mt-0 lg:grid lg:grid-cols-3 lg:border-l lg:border-l-sd-divider">
@@ -135,6 +141,7 @@ export function QuizQuestion({ s, act }: { s: CourseState; act: Act }) {
   const { idx, answers } = s.quiz;
   const q = QUESTIONS[idx];
   const a = answers[idx];
+  const sending = s.quiz.stage === "sending";
   // Alternating the keyframe name restarts the slide-in on every new question.
   const anim = idx % 2 ? "sd-a-side" : "sd-a-side-b";
   const last = idx === QUESTIONS.length - 1;
@@ -173,9 +180,9 @@ export function QuizQuestion({ s, act }: { s: CourseState; act: Act }) {
         )}
       </div>
       <div className="sticky bottom-0 mt-auto flex gap-2 border-t-2 border-sd-divider bg-sd-bg px-5 pt-3 pb-4 lg:px-0 lg:pt-4 lg:pb-0">
-        <button type="button" onClick={() => act(nextQuestion)} className="sd-btn sd-btn-secondary h-[52px] w-24 justify-start lg:h-12 lg:w-[110px]">Skip</button>
-        <button type="button" onClick={() => act(nextQuestion)} disabled={!isAnswered(q, a)} className="sd-btn sd-btn-primary h-[52px] flex-1 justify-between text-base lg:h-12 lg:w-[220px] lg:flex-none">
-          {last ? "Finish" : "Next"}<Icon name="arrowR" />
+        <button type="button" onClick={() => act(nextQuestion)} disabled={sending} className="sd-btn sd-btn-secondary h-[52px] w-24 justify-start lg:h-12 lg:w-[110px]">Skip</button>
+        <button type="button" onClick={() => act(nextQuestion)} disabled={sending || !isAnswered(q, a)} className="sd-btn sd-btn-primary h-[52px] flex-1 justify-between text-base lg:h-12 lg:w-[220px] lg:flex-none">
+          {sending ? "Grading…" : last ? "Finish" : "Next"}<Icon name="arrowR" />
         </button>
         <span className="ml-auto hidden self-center text-xs text-sd-n-700 lg:inline">Press 1–4 to answer · Enter for next</span>
       </div>

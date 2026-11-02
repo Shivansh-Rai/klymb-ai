@@ -6,6 +6,7 @@ import { CareerTracks } from "@/components/home/CareerTracks";
 import { Evidence } from "@/components/home/Evidence";
 import { FaqJoin } from "@/components/home/FaqJoin";
 import { StickyEnrolBar } from "@/components/home/StickyEnrolBar";
+import { SystemDesignFeature } from "@/components/home/SystemDesignFeature";
 import { WhyRefund } from "@/components/home/WhyRefund";
 import { allFree } from "@/data/tracks";
 import { Hero } from "@/components/home/Hero";
@@ -16,16 +17,18 @@ import { TwoWays } from "@/components/home/TwoWays";
 import { StatementBand } from "@/components/home/StatementBand";
 import { redirect } from "next/navigation";
 import { statement } from "@/data/program";
-import { getLearnerState } from "@/lib/learner/data";
+import { getLearnerState, redirectCourseBuyer } from "@/lib/learner/data";
 
 export default async function HomePage() {
-  // A signed-in learner wants their cohort, not the sales page.
+  // A signed-in learner wants their course or cohort, not the sales page.
+  await redirectCourseBuyer();
   const learner = await getLearnerState();
   if (learner.state === "enrolled") redirect("/learn");
 
   return (
     <>
       <Hero />
+      <SystemDesignFeature />
       <ExpertsStrip className="border-y border-line/30 bg-white py-8 sm:py-9" />
       <StatementBand>{statement}</StatementBand>
       <LazyPromoFilm />

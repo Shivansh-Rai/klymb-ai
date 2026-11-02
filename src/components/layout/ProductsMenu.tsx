@@ -9,6 +9,7 @@ const BADGE: Record<NonNullable<Product["badge"]>, string> = {
   Free: "bg-[#dcfce7] text-[#166534]",
   "Coming soon": "bg-surface text-muted",
   "You're here": "bg-red-tint text-red-deep",
+  New: "bg-[#e7c97a] text-[#2a1d05]",
 };
 
 /**

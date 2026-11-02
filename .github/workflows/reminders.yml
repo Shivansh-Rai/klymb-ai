@@ -15,3 +15,8 @@ jobs:
           curl -fsS --max-time 120 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             https://www.klymb.ai/api/cron/reminders
+      - name: Tell waiting System Design learners a lesson is out
+        run: |
+          curl -fsS --max-time 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.klymb.ai/api/cron/sd-releases
