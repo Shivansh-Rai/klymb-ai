@@ -1,10 +1,9 @@
 import "server-only";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { getTrack } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 import { db } from "@/lib/db/client";
-import { sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
+import { MAIL_SUPPORT, mailReady, sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
 import { referralFor } from "@/lib/referrals";
 import { SD_COURSE } from "@/lib/sd-offer";
 
@@ -17,7 +16,7 @@ import { SD_COURSE } from "@/lib/sd-offer";
  */
 export async function sendReceiptOnce(orderId: string) {
   const sql = db();
-  if (!sql || !process.env.BREVO_API_KEY) return;
+  if (!sql || !mailReady()) return;
 
   const { data: pay } = await sql.row<{
     id: string; email: string; track: string; amount: number;
@@ -42,13 +41,20 @@ export async function sendReceiptOnce(orderId: string) {
     amount: formatINR(pay.amount / 100),
     paymentId: pay.razorpay_payment_id ?? orderId,
     siteUrl: site.url,
-    supportEmail: grievance.email,
+    supportEmail: MAIL_SUPPORT,
   };
   const referral = sd ? await referralFor(pay.email) : null;
   const mail = sd ? sdReceiptEmail({ ...details, referral: referral?.state === "open" ? referral : null }) : thankYouEmail({ ...details, trackName: getTrack(pay.track)?.name ?? pay.track });
 
-  const sent = await sendMail({ to: { email: pay.email, name: reg?.name ?? undefined }, ...mail });
-  if (!sent.ok) {
+  const sent = await sendMail({
+    to: { email: pay.email, name: reg?.name ?? undefined },
+    ...mail,
+    kind: sd ? "sd.receipt" : "payment.receipt",
+    // The order: a retry after a failed send is the same mail, so ABT-Mailer sends it once.
+    idempotencyKey: orderId,
+  });
+  // A suppressed address (hard bounce) won't take it on a retry either, so the claim stays.
+  if (!sent.ok && !sent.skipped) {
     console.error("thank-you email failed:", orderId, sent.reason);
     await sql.run`update course.payments set receipt_sent_at = null where id = ${pay.id}`;
   }

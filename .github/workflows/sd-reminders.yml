@@ -1,0 +1,18 @@
+# System Design reminder emails at 20:00 IST (14:30 UTC). Vercel's free plan allows one cron a day, so GitHub runs these.
+# The endpoint decides who gets one and never mails anyone twice in a day, so a manual re-run is safe.
+# GitHub can start a scheduled run some minutes late. CRON_SECRET is a repository secret.
+name: System Design reminders
+on:
+  schedule:
+    - cron: "30 14 * * *"
+  workflow_dispatch: {}
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Send reminders
+        run: |
+          curl -fsS --max-time 300 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.klymb.ai/api/cron/sd-reminders
