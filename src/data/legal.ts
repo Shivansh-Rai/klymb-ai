@@ -143,6 +143,7 @@ export const dataPoints = {
     ["Neon", "Database holding registrations, learner records, submissions, lesson results and payment records", "United States"],
     ["Razorpay", "Taking payments and issuing refunds", "India"],
     ["Brevo", "Sending receipts and course emails", "European Union"],
+    ["Amazon SES", "Sending course emails, through our mail service", "Global"],
     ["Cloudflare", "Storing and delivering course videos", "Global"],
     ["Supabase", "Live messages that sign a second device out, holding no personal records", "Tokyo, Japan"],
     ["Google", "Sign-in (OAuth) and Google Analytics 4", "Global"],
