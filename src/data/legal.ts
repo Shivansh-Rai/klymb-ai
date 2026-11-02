@@ -1,4 +1,5 @@
 import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+import { SD_REFERRAL } from "@/lib/sd-offer";
 
 const LESSON_TOTAL = MODULES.reduce((n, m) => n + m.lessons.length, 0);
 
@@ -58,8 +59,8 @@ export const grievance = {
 } as const;
 
 export const policyVersion = {
-  version: "2026-10-29",
-  effective: "29 October 2026",
+  version: "2026-11-03",
+  effective: "3 November 2026",
 } as const;
 
 /**
@@ -112,6 +113,17 @@ export const sdRefund = {
   forfeit: "Access ended for cheating, shared accounts or fabricated results does not qualify for the refund.",
   /** confirm: does this need a stated window? */
   duplicate: "If you are charged twice for the course by mistake, write to us and we refund the extra payment.",
+  referral: {
+    headline: `Get ${SD_REFERRAL.friends} friends to buy System Design within ${SD_REFERRAL.days} days of your purchase and we refund 100% of your fee. You keep the course.`,
+    conditions: [
+      `${SD_REFERRAL.friends} different people each buy the course with their own Google account, using your link or referral code`,
+      `Each of them pays within ${SD_REFERRAL.days} days of your purchase. If you bought before this offer began, your ${SD_REFERRAL.days} days start on the day it began`,
+      "Each of them still has their seat when your refund is paid",
+    ],
+    payout: "We refund 100% of what you paid, whatever price your friends paid, to your original payment method within 14 working days of your third friend's purchase, once we have verified it. You do not need to claim it.",
+    once: "A payment is refunded once. Referring more friends does not earn more money, and if you also finish the course you still get your fee back only once. Friends you refer get no discount.",
+    forfeit: "Referring yourself, using fake or shared accounts, or spamming people with your link does not qualify, and we may end the referral for it.",
+  },
 } as const;
 
 export const dataPoints = {
@@ -121,6 +133,7 @@ export const dataPoints = {
     ["Evidence accounts", "The GitHub username and LinkedIn profile you declare, so submitted links can be checked as yours"],
     ["Coursework", "Daily submissions, deliverable links, your notes, knowledge-check answers, checkpoint LinkedIn post links, assessment scores and reviewer feedback"],
     ["LinkedIn posting (optional)", "Only if you connect LinkedIn to post in one tap: an access token that lets us publish posts you confirm, your LinkedIn member ID and display name, and when that permission expires. The token and ID are stored encrypted. We never read your feed, connections, messages or email, and nothing is posted unless you tap Post"],
+    ["Referrals", "Your referral code, whose code you used when you bought System Design, and how many people bought with yours. People who open your link see your first name. We never tell anyone who bought"],
     ["Technical logs", "IP address, request time, path, status and browser type, processed by our hosting provider to serve pages and keep the service secure"],
     ["Analytics", "Aggregate usage measured with Google Analytics 4, on by default and switchable off at /cookies; cookieless page-view and page-speed counts from Vercel"],
   ],

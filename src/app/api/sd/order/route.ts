@@ -4,7 +4,8 @@ import { db } from "@/lib/db/client";
 import { todayInIndia } from "@/lib/learn";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { SD_COURSE, campaignOf, claimProblems, linkedInProblem, mobileOf, sdPriceFor, sdPriceNow, type SdRole } from "@/lib/sd-offer";
+import { referrerOf } from "@/lib/referrals";
+import { SD_COURSE, campaignOf, claimProblems, linkedInProblem, mobileOf, refOf, referralProblem, sdPriceFor, sdPriceNow, type SdRole } from "@/lib/sd-offer";
 import { LIMITS, clamp } from "@/lib/validation";
 
 /**
@@ -14,13 +15,14 @@ import { LIMITS, clamp } from "@/lib/validation";
  * so neither can be edited on the way. The page only calls this once they are
  * back from Google, which is where the email comes from. Their answers are saved first, keeping
  * any price they locked earlier: someone who claims during the offer keeps its
- * price even if they finish paying after it ends.
+ * price even if they finish paying after it ends. A referral code is checked
+ * here, so a bad one is refused while they can still fix it, not after paying.
  */
 export async function POST(req: Request) {
   const email = await currentEmail();
   if (!email) return NextResponse.json({ error: "Please sign in with Google again." }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as { name?: unknown; phone?: unknown; linkedin?: unknown; role?: unknown; campaign?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { name?: unknown; phone?: unknown; linkedin?: unknown; role?: unknown; campaign?: unknown; ref?: unknown } | null;
   const name = clamp(body?.name, LIMITS.name);
   const phone = String(body?.phone ?? "");
   const role = String(body?.role ?? "");
@@ -46,6 +48,18 @@ export async function POST(req: Request) {
 
   const now = new Date();
   const contact = `+91${mobileOf(phone)}`;
+
+  let referrerEmail: string | null = null;
+  const typedRef = clamp(body?.ref, 20);
+  if (typedRef) {
+    const code = refOf(typedRef);
+    const { data: referrer, error: refError } = code ? await referrerOf(sql, code) : { data: null, error: null };
+    if (refError) return NextResponse.json({ error: "Payments are not available right now." }, { status: 500 });
+    const refused = referralProblem(referrer, { email, phone: contact });
+    if (refused) return NextResponse.json({ error: refused }, { status: 400 });
+    referrerEmail = referrer!.email;
+  }
+
   const { data: lead, error: leadError } = await sql.row<{ locked_price: number }>`
     insert into course.sd_preregistrations (email, name, phone, linkedin, status, locked_price, consent)
     values (${email}, ${name}, ${contact}, ${linkedin || null}, ${role as SdRole}, ${sdPriceNow(now)}, false)
@@ -70,8 +84,8 @@ export async function POST(req: Request) {
   }
 
   const { error } = await sql.run`
-    insert into course.payments (email, track, cohort_start, amount, currency, razorpay_order_id, campaign)
-    values (${email}, ${SD_COURSE}, ${todayInIndia()}, ${order.amount}, ${order.currency}, ${order.id}, ${campaignOf(body?.campaign)})
+    insert into course.payments (email, track, cohort_start, amount, currency, razorpay_order_id, campaign, referrer_email)
+    values (${email}, ${SD_COURSE}, ${todayInIndia()}, ${order.amount}, ${order.currency}, ${order.id}, ${campaignOf(body?.campaign)}, ${referrerEmail})
   `;
   if (error) {
     console.error("payments insert failed:", error.code, error.message);

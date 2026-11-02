@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { recordPaid } from "@/lib/payments";
 import { razorpayKeys, signatureValid } from "@/lib/razorpay";
 import { sendReceiptOnce } from "@/lib/receipt";
+import { creditReferrer } from "@/lib/referrals";
 
 const field = (v: unknown) => (typeof v === "string" && v.length > 0 && v.length <= 200 ? v : null);
 
@@ -31,7 +32,8 @@ export async function POST(req: Request) {
   }
 
   // The thank-you email goes after the response, so the learner is not kept waiting on it.
-  after(() => sendReceiptOnce(orderId));
+  // The referrer's credit goes then too, and the webhook is the retry if it fails.
+  after(() => Promise.all([sendReceiptOnce(orderId), creditReferrer(sql, orderId)]));
 
   return NextResponse.json({ ok: true });
 }

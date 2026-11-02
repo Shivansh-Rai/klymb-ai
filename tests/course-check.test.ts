@@ -81,7 +81,7 @@ test("a locked lesson won't open from the course list, but a shared link still d
   assert.equal(deepLink(s, "0-1", NOW).screen, "player");
 });
 
-test("the lesson isn't finished until the check is passed", () => {
+test("the lesson isn’t finished until the check is passed, whatever the practice", () => {
   const steps = { pre: [0, 0, 0], watched: true, est: [1200, 12, 700], built: 0, drawn: { score: 2, of: 2 }, follow: [true, true, true, true] };
   const failed = submitCheck(updateLesson(home(), "0-0", steps, NOW), "0-0", qs, picks(3), NOW);
   assert.equal(flowDone(failed, "0-0"), false);

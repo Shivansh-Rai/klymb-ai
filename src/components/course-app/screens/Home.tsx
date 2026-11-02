@@ -2,11 +2,12 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, lessonSteps, localDate, openLesson, pct, startQuiz, streak, type CourseState } from "@/lib/course-app";
+import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openLesson, pct, startQuiz, streak, type CourseState } from "@/lib/course-app";
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
 import { OverviewVideo } from "../Overlays";
+import { ReferralCard, useReferral } from "../Referral";
 import { Bar, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 
@@ -56,12 +57,13 @@ function kamranSays(s: CourseState, first: string | null) {
   if (!day) return `${hi}${name} is in the full course.`;
   if (!s.done.length && !p) return `Hi${first ? ` ${first}` : ""}, I’m Kamran. ${name} takes about ${day.minutes} minutes.`;
   if (!p) return `${hi}${name} takes about ${day.minutes} minutes.`;
-  const next = lessonSteps(s, s.cur, day).find((x) => !x.done);
-  return `${hi}Pick up at ${STEP_NAME[next?.key ?? "done"]}.`;
+  const next = nextStep(s, s.cur, day);
+  return `${hi}Pick up at ${STEP_NAME[next]}.`;
 }
 
 export function Home({ s, act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
+  const referral = useReferral();
   const c = lesson(s.cur);
   const postP = s.post ? pct(s.post) : null;
   const doneCount = s.done.length;
@@ -141,6 +143,8 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
           <div className="w-full sm:w-[280px]"><GoogleButton lesson={s.cur} where="home" label="Save progress with Google" className="h-11 border-2 border-sd-ink" /></div>
         )}
       </div>
+
+      {referral && <ReferralCard r={referral} className="sd-a-in lg:max-w-[560px]" />}
 
       <div className="grid items-start gap-6 border-t-2 border-sd-divider pt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-7 lg:pt-6">
         <section aria-label="Today" className="sd-a-in flex min-w-0 flex-col gap-[18px]" style={{ animationDuration: ".5s", animationDelay: "150ms" }}>

@@ -32,6 +32,8 @@ export interface Note { t: number; text: string }
 export interface LessonProgress {
   /** Sent the end-of-day feedback. */
   feedback?: boolean;
+  /** Posted (or sent to LinkedIn) from the share card. */
+  shared?: boolean;
   watched?: boolean; read?: boolean; post?: number[];
   /** Estimate answers, as typed. */
   est?: number[];
@@ -60,6 +62,8 @@ export interface CourseState {
   onboarded: boolean;
   onb: number;
   splashUntil: number;
+  /** They've been shown the referral offer on this device. */
+  referralSeen: boolean;
   /** Current lesson id, "module-lesson", zero-based. */
   cur: string;
   t: number;
@@ -127,7 +131,7 @@ export interface CourseState {
   checkBusy: boolean;
   /** Where the lesson assessment is: the intro card, the questions, the results, or the passed row. */
   checkStage: CheckStage;
-  /** Question the assessment is on, and the estimate / follow-up the practice is on: the N in "N / 14". */
+  /** Question the assessment is on (the N in "N / 5"), and the estimate / follow-up the extra practice is on. */
   checkIdx: number;
   estIdx: number;
   fuIdx: number;
@@ -158,9 +162,10 @@ export function checkStageFor(p?: LessonProgress): CheckStage {
 }
 
 /**
- * The day's assessment is numbered as one run: the check's questions, then the
+ * The day's parts numbered as one run: the check's questions, then the
  * estimates, the build, the drawing, the design and the follow-ups, as many as the day has.
- * `first` is where each part's numbering starts.
+ * `first` is where each part's numbering starts. The assessment is the check alone; the
+ * rest is the optional extra practice, counted from one on its own (see `practiceStep`).
  */
 export function assessmentParts(id: string, lang: Lang = "en") {
   const c = dayOf(id)?.copy[lang];
@@ -172,25 +177,37 @@ export function assessmentParts(id: string, lang: Lang = "en") {
   return { total: n - 1, first, sizes };
 }
 
+/** The optional extra practice, in order. It never gates finishing the lesson. */
+export const PRACTICE_KEYS: StepKey[] = ["estimate", "build", "draw", "design", "follow"];
+
+/** How many parts the extra practice has: everything in the day but the check. */
+export const practiceTotal = (id: string, lang: Lang = "en") => { const { total, sizes } = assessmentParts(id, lang); return total - sizes.prove; };
+
 /**
- * The big "N / total" in the assessment header. Zero while the part is done,
- * on the intro card, and on the results: no counter to show there.
+ * The big "N / 5" in the assessment header while the check's questions run.
+ * Zero on the intro card, on the results, and outside the check: no counter to
+ * show there. The extra practice has its own count, `practiceStep`.
  */
-export function assessmentStep(s: CourseState, id: string): number {
+export function assessmentStep(s: CourseState): number {
+  return s.stage === "prove" && s.checkStage === "q" ? s.checkIdx + 1 : 0;
+}
+
+/** The "N / total" inside the extra practice, counted from one after the check. Zero once a part is done. */
+export function practiceStep(s: CourseState, id: string): number {
   const p: LessonProgress = s.lessons[id] ?? {};
   const { first, sizes } = assessmentParts(id, s.lang);
+  const at = (k: keyof typeof first) => first[k] - sizes.prove;
   switch (s.stage) {
-    case "prove": return s.checkStage === "q" ? first.prove + s.checkIdx : 0;
-    case "estimate": return p.est ? 0 : first.estimate + s.estIdx;
-    case "build": return p.built === undefined ? first.build : 0;
-    case "draw": return p.drawn ? 0 : first.draw;
-    case "design": return p.design ? 0 : first.design;
-    case "follow": return p.follow ? 0 : first.follow + Math.min(s.fuIdx, Math.max(sizes.follow - 1, 0));
+    case "estimate": return p.est ? 0 : at("estimate") + s.estIdx;
+    case "build": return p.built === undefined ? at("build") : 0;
+    case "draw": return p.drawn ? 0 : at("draw");
+    case "design": return p.design ? 0 : at("design");
+    case "follow": return p.follow ? 0 : at("follow") + Math.min(s.fuIdx, Math.max(sizes.follow - 1, 0));
     default: return 0;
   }
 }
 
-/** The lesson's steps in order: watch → learn → prove it → estimate → build it → design it → follow-ups → done. Each opens when the one before it is done. */
+/** The lesson's steps in order: watch → learn → prove it → (extra practice) → done. Only watch and prove it gate the day; the practice is optional. */
 export function lessonSteps(s: CourseState, id: string, day: Day) {
   const c = day.copy[s.lang];
   const p: LessonProgress = s.lessons[id] ?? {};
@@ -199,7 +216,7 @@ export function lessonSteps(s: CourseState, id: string, day: Day) {
     { key: "reveal", done: !!p.read || !!p.post, open: !!p.watched },
     { key: "prove", done: !!p.post, open: !!p.watched },
   ];
-  const add = (key: StepKey, done: boolean) => steps.push({ key, done, open: steps[steps.length - 1].done });
+  const add = (key: StepKey, done: boolean) => steps.push({ key, done, open: !!p.post });
   if (c.estimates?.length) add("estimate", !!p.est);
   if (c.build) add("build", p.built !== undefined);
   if (c.canvas) add("draw", !!p.drawn);
@@ -209,15 +226,28 @@ export function lessonSteps(s: CourseState, id: string, day: Day) {
   return steps;
 }
 
+/** The first extra-practice part the lesson has, or null when it has none. */
+export function practiceStart(s: CourseState, id: string): StepKey | null {
+  const d = dayOf(id);
+  if (!d) return null;
+  return lessonSteps(s, id, d).find((x) => PRACTICE_KEYS.includes(x.key))?.key ?? null;
+}
+
+/** The next required step: the first one not done, leaving the optional practice out. */
+export function nextStep(s: CourseState, id: string, day: Day): StepKey {
+  return lessonSteps(s, id, day).find((x) => !x.done && !PRACTICE_KEYS.includes(x.key))?.key ?? "done";
+}
+
 /**
- * The step a lesson opens on: the first one still to do, or the video when the
- * day is finished. "Learn" is never it — the day runs video → assessment →
- * practice, and what really happened is reference, opened from the step bar.
+ * The step a lesson opens on: the first required one still to do, or the video
+ * when the day is finished. "Learn" is never it — the day runs video →
+ * assessment → share and choose, and what really happened is reference, opened
+ * from the step bar. A lesson passed but not completed opens on the choice.
  */
 export function stageFor(s: CourseState, id: string): StepKey {
   const d = dayOf(id);
   if (!d) return "watch";
-  return lessonSteps(s, id, d).find((x) => x.open && !x.done && x.key !== "reveal")?.key ?? "watch";
+  return lessonSteps(s, id, d).find((x) => x.open && !x.done && x.key !== "reveal" && !PRACTICE_KEYS.includes(x.key))?.key ?? "watch";
 }
 
 /** The lesson check: questions per lesson and the share needed to pass. */
@@ -284,13 +314,11 @@ export const quickCheckOf = (id: string) => content[id]?.quickCheck;
 export const hasQuickCheck = (id: string) => !!quickCheckOf(id);
 export const lessonDay = (id: string) => { const d = dayOf(id); return d ? `Day ${d.day}` : `Day ${ALL_IDS.indexOf(id) + 1}`; };
 
-/** Every step of the lesson is finished: video, learn, prove it, build (if any), follow-ups (if any). */
+/** The lesson can be finished: the video is watched and the check passed. The extra practice is optional. */
 export function flowDone(s: CourseState, id: string) {
-  const d = dayOf(id);
-  if (!d) return false;
+  if (!dayOf(id)) return false;
   const p = s.lessons[id] ?? {};
-  const c = d.copy[s.lang];
-  return !!(p.watched && p.post && (!c.estimates?.length || p.est) && (!c.build || p.built !== undefined) && (!c.canvas || p.drawn) && (!c.design || p.design) && (!c.followUps?.length || p.follow));
+  return !!(p.watched && p.post);
 }
 
 /** Saves a lesson step and counts today towards the streak. */
@@ -299,6 +327,14 @@ export function updateLesson(s: CourseState, id: string, patch: Partial<LessonPr
   const activeDays = s.activeDays.includes(today) ? s.activeDays : [...s.activeDays, today];
   return { ...s, lessons: { ...s.lessons, [id]: patch ? { ...(s.lessons[id] ?? {}), ...patch } : {} }, activeDays };
 }
+
+/** Remembers the learner shared this lesson. Not a lesson step, so it does not count towards the streak. */
+export function markShared(s: CourseState, id: string): CourseState {
+  return s.lessons[id]?.shared ? s : { ...s, lessons: { ...s.lessons, [id]: { ...(s.lessons[id] ?? {}), shared: true } } };
+}
+
+/** A lesson passed once can be revisited: its assessment, extra practice and share template sit under the video. */
+export const revisitable = (s: CourseState, id: string) => !!dayOf(id) && !!s.lessons[id]?.post;
 
 const dayKey = (d: Date) => localDate(d);
 /** Current streak (days in a row up to today, or up to yesterday if today isn't done yet) and the longest run. */
@@ -351,7 +387,7 @@ const toast = (msg: string, now: number, ms = 2600) => ({ toast: msg, toastUntil
 /** A first visit: nothing done, no baseline yet, the course opens on Day 1. */
 export function defaultState(now = Date.now()): CourseState {
   return {
-    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800,
+    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800, referralSeen: false,
     cur: "0-0", t: 0, playing: false, speed: 1, visited: false, miniHide: null, ended: false, upNext: 0,
     notes: {}, draft: "", ptab: "lessons", openMod: 0, done: [],
     quiz: { kind: "pre", stage: "intro", idx: 0, answers: {} }, timeLeft: TIMED_SECONDS, confirmExit: false,
@@ -497,7 +533,7 @@ export function openLesson(s: CourseState, id: string, now = Date.now(), force =
 
 /** Marks the current lesson done and moves on: to the next lesson, or to the recap when a module is finished. */
 export function completeNext(s: CourseState, auto: boolean, now = Date.now()): CourseState {
-  if (dayOf(s.cur) && !flowDone(s, s.cur)) return { ...s, ...toast("Finish today’s practice first", now) };
+  if (dayOf(s.cur) && !flowDone(s, s.cur)) return { ...s, ...toast("Pass today’s check first", now) };
   const nextId = ALL_IDS[ALL_IDS.indexOf(s.cur) + 1];
   const done = s.done.includes(s.cur) ? s.done : [...s.done, s.cur];
   const cmi = lesson(s.cur).mi;
@@ -608,7 +644,7 @@ export function badges(s: CourseState, now = Date.now()): Badge[] {
 
 /** Fields kept in storage between visits. Preview switches and transient UI stay out. */
 const PERSISTED = [
-  "onboarded", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone", "notifs",
+  "onboarded", "referralSeen", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone", "notifs",
   "goal", "remind", "autoplay", "quality", "wifiOnly", "streakRem", "replyNotif", "todaySec", "today",
   "lessons", "lang", "subs", "subLang", "subSize", "audio", "volume", "muted", "toured", "activeDays", "commitment", "popDay",
 ] as const satisfies readonly (keyof CourseState)[];

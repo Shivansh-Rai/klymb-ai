@@ -5,12 +5,13 @@ import { LESSON_DAYS } from "../src/data/system-design/lessons";
 import { lessonContent } from "../src/lib/sd-lessons";
 import {
   ALL_IDS, addNote, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
-  migrateLegacy, miniActive, nextQuestion, openLesson, pickOption, previewState, setAnswer, stageFor, streak, tick, toStored, togglePlay,
+  markShared, migrateLegacy, miniActive, nextQuestion, nextStep, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
   setLessons, updateLesson, type CourseState,
 } from "../src/lib/course-app";
 
 // The app gets its lessons from the server; these tests take the full set, as a seat holder does.
-setLessons(lessonContent(true));
+const FULL = lessonContent(true);
+setLessons(FULL);
 
 const NOW = new Date(2026, 9, 21, 9, 0, 0).getTime();
 const home = (): CourseState => ({ ...defaultState(NOW), screen: "home", onboarded: true });
@@ -94,12 +95,27 @@ test("offline, the lesson won't play", () => {
   assert.equal(togglePlay({ ...s, offline: false }).playing, true);
 });
 
-test("a lesson can't be completed until its practice is done", () => {
+test("a lesson can't be completed until the check is passed", () => {
   const s: CourseState = { ...home(), screen: "player", cur: "0-0" };
   assert.equal(flowDone(s, "0-0"), false);
   const blocked = completeNext(s, false, NOW);
   assert.deepEqual(blocked.done, []);
-  assert.match(blocked.toast ?? "", /practice/);
+  assert.match(blocked.toast ?? "", /check/);
+});
+
+test("passing the check is enough to complete a lesson: the extra practice is optional", () => {
+  const s = updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW);
+  assert.equal(flowDone(s, "0-1"), true);
+  assert.deepEqual(completeNext({ ...s, screen: "player", cur: "0-1" }, false, NOW).done, ["0-1"]);
+});
+
+test("the extra practice starts on the lesson's first practice step, or nowhere when it has none", () => {
+  assert.equal(practiceStart(home(), "0-1"), "build");
+  assert.equal(practiceStart(home(), "0-0"), "build");
+  const noPractice = { ...LESSON_DAYS["0-0"], copy: { ...LESSON_DAYS["0-0"].copy, en: { ...LESSON_DAYS["0-0"].copy.en, estimates: undefined, build: undefined, canvas: undefined, design: undefined, followUps: undefined } } };
+  setLessons({ ...FULL, "0-0": { ...FULL["0-0"], day: noPractice } });
+  assert.equal(practiceStart(home(), "0-0"), null);
+  setLessons(FULL);
 });
 
 test("finishing Day 1 marks it done and opens Day 2", () => {
@@ -120,7 +136,7 @@ test("a lesson opens on the step it still has to do, and the next one on its vid
   assert.equal(read.stage, "prove", "learn is read, the assessment still stands");
 
   const passed = openLesson(updateLesson(home(), "0-0", { watched: true, post: [0, 0, 0, 0, 0] }, NOW), "0-0", NOW);
-  assert.equal(passed.stage, "build", "past the assessment, on to the practice");
+  assert.equal(passed.stage, "done", "past the assessment, on to the share-and-choose screen");
 
   const on = completeNext(day0Done({ ...home(), screen: "player", cur: "0-0", stage: "done" }), false, NOW);
   assert.equal(on.stage, "watch", "Day 2 starts on its own video, not Day 1's last step");
@@ -247,14 +263,10 @@ test("a first visit starts on the splash screen", () => {
   assert.equal(fromStored({ onboarded: false }, NOW).screen, "splash");
 });
 
-test("a day with estimates and a design attempt isn't finished until both are done", () => {
-  const base = { pre: [0, 0, 0], watched: true, post: [0, 0, 0, 0], built: 1, drawn: { score: 3, of: 3 }, follow: [true, true, true, true] };
-  const noEst = updateLesson(home(), "0-1", base, NOW);
-  assert.equal(flowDone(noEst, "0-1"), false, "estimates still to do");
-  const noDesign = updateLesson(home(), "0-1", { ...base, est: [267, 30000, 267] }, NOW);
-  assert.equal(flowDone(noDesign, "0-1"), false, "design attempt still to write");
-  const all = updateLesson(noDesign, "0-1", { design: "Waiting room and one atomic stock counter." }, NOW);
-  assert.equal(flowDone(all, "0-1"), true);
+test("a day's estimates, build, design and follow-ups never hold the day back", () => {
+  const passed = updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW);
+  assert.equal(flowDone(passed, "0-1"), true, "no practice done, still finished");
+  assert.equal(nextStep(passed, "0-1", LESSON_DAYS["0-1"]), "done", "home never sends a learner to the optional practice");
 });
 
 test("course activity events are cut down to known names and short, flat values", async () => {
@@ -286,4 +298,19 @@ test("the admin summary counts each learner once per step and finds where they s
   assert.equal(day0.answers[0].right, 1);
   assert.equal(sum.totals.visitors, 2);
   assert.equal(sum.totals.completedAny, 1);
+});
+
+test("a passed lesson can be revisited, a lesson only watched cannot", () => {
+  assert.equal(revisitable(home(), "0-1"), false);
+  assert.equal(revisitable(updateLesson(home(), "0-1", { watched: true }, NOW), "0-1"), false);
+  assert.equal(revisitable(updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW), "0-1"), true);
+});
+
+test("sharing is remembered without counting as a step of the day", () => {
+  const s = updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW);
+  const shared = markShared({ ...s, activeDays: [] }, "0-1");
+  assert.equal(shared.lessons["0-1"].shared, true);
+  assert.deepEqual(shared.lessons["0-1"].post, [0, 0, 0, 0, 0], "the rest of the progress stays");
+  assert.deepEqual(shared.activeDays, [], "no streak day for a share");
+  assert.equal(markShared(shared, "0-1"), shared, "sharing twice changes nothing");
 });

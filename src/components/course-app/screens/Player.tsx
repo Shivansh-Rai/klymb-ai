@@ -4,12 +4,13 @@ import clsx from "clsx";
 import { useEffect, useRef, type ReactNode } from "react";
 import { MODULES } from "@/data/system-design/course-app";
 import {
-  ALL_IDS, addNote, assessmentStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
+  ALL_IDS, addNote, assessmentStep, practiceStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, revisitable, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
   addRewatch, retryVideo, seekTo, subtitleLines, togglePlay, updateLesson, type CourseState, type PlayerTab,
 } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { Community } from "../lesson/Community";
 import { LessonStage } from "../lesson/Practice";
+import { Revisit } from "../lesson/Revisit";
 import { Tour } from "../lesson/Tour";
 import { track } from "../track";
 import { BackButton, Duration, LessonMark, lessonView } from "../ui";
@@ -194,7 +195,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
   const day = dayOf(s.cur);
   const nextId = ALL_IDS[ALL_IDS.indexOf(s.cur) + 1];
   const qc = hasQuickCheck(s.cur) ? fmt(quickCheckAt(s.cur)) : null;
-  const done = flowDone(s, s.cur);
+  const done = flowDone(s, s.cur) && s.stage !== "done";
   const completeLabel = nextId ? "Mark complete · next lesson" : "Mark complete";
   const tabs: [PlayerTab, string][] = [
     ["lessons", "Lessons"],
@@ -207,7 +208,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
   // The assessment takes the whole column: from the questions on, and while the estimates, build,
   // design and follow-ups are being worked through, the lesson title and the side panel step aside.
   const inAs = s.stage === "prove" && s.checkStage !== "intro";
-  const hideChrome = inAs || assessmentStep(s, s.cur) > 0;
+  const hideChrome = inAs || assessmentStep(s) > 0 || practiceStep(s, s.cur) > 0;
   const subsOn = !!day && canSubtitle(s) && s.subs;
   const menu = useMenu();
   usePlayerKeys(act, !!day && !s.qcOpen);
@@ -247,6 +248,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
               </div>
             </div>
           )}
+          {watching && day && revisitable(s, s.cur) && <div className="px-5 lg:px-0"><Revisit s={s} act={act} id={s.cur} day={day} /></div>}
         </div>
 
         {!hideChrome && <div data-tour="tabs" className="mt-4 flex flex-col lg:col-start-2 lg:row-start-1 lg:mt-0 lg:overflow-hidden lg:rounded-xl lg:border-2 lg:border-sd-divider">

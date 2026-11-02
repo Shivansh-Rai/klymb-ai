@@ -1,9 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { useState } from "react";
 import type { Day, DayCopy } from "@/data/system-design/types";
-import { ALL_IDS, assessmentParts, assessmentStep, completeNext, isPaywalled, isSoon, lessonSteps, pad, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
+import { ALL_IDS, PRACTICE_KEYS, assessmentParts, assessmentStep, completeNext, isPaywalled, isSoon, lessonSteps, markShared, pad, practiceStart, practiceStep, practiceTotal, score, updateLesson, type CourseState, type LessonProgress, type StepKey } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { stagger } from "../ui";
 import type { Act } from "../useCourseApp";
@@ -15,12 +14,10 @@ import { Feedback } from "./Feedback";
 import { FollowUps } from "./FollowUps";
 import { LessonCheck } from "./LessonCheck";
 import { StudyBuddy } from "@/components/learner/StudyBuddy";
-import { useLinkedInPost } from "@/components/share/LinkedInPost";
-import { fetchImage, pasteKey, useShareImage, type LinkedInShare } from "@/lib/linkedin-share";
-import { track } from "../track";
+import { ShareCard } from "./ShareCard";
 import { GoogleButton, useCourseUser } from "../user";
 
-const UI = {
+export const UI = {
   en: {
     steps: { watch: "Watch", reveal: "Learn", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
     assessment: "Assessment", dayComplete: "Day complete",
@@ -35,10 +32,9 @@ const UI = {
     scored: (b: number, bOf: number) => `Prove it: ${b} of ${bOf} right`,
     savePrompt: (day: number) => `Day ${day} done! Sign in so it’s saved to your name, on any phone or laptop, and your streak keeps counting.`,
     readDone: "Got it", toNext: (label: string) => `Next: ${label}`,
-    cheatsheet: "Cheatsheet", interview: "Say it in 2 minutes", share: "Share on LinkedIn",
-    download: "Download image", post: "Post on LinkedIn",
-    posted: { posted: "Posted on LinkedIn.", app: "Sent to LinkedIn. Tap Post there.", pasted: (key: string) => `Text is in. Press ${key} in the post to add the image, then tap Post.`, text: "Text is in. Attach the downloaded image, then tap Post." },
+    cheatsheet: "Cheatsheet", interview: "Say it in 2 minutes",
     complete: "Mark complete", redo: "Do this lesson again",
+    nextLesson: "Next lesson", practise: "Practise extra exercises", practiseSub: "Not mandatory, but highly recommended", practised: "Extra practice done. Do it again any time.", extra: "Extra practice",
   },
   hi: {
     steps: { watch: "Watch", reveal: "Samjho", prove: "Prove it", estimate: "Estimate", build: "Build it", draw: "Draw it", design: "Design it", follow: "Follow-ups", done: "Done" } as Record<StepKey, string>,
@@ -54,13 +50,12 @@ const UI = {
     scored: (b: number, bOf: number) => `Prove it: ${bOf} mein se ${b} sahi`,
     savePrompt: (day: number) => `Day ${day} ho gaya! Sign in karo taaki yeh tumhare naam pe save ho, kisi bhi phone ya laptop pe, aur streak chalti rahe.`,
     readDone: "Samajh gaya", toNext: (label: string) => `Agla: ${label}`,
-    cheatsheet: "Cheatsheet", interview: "2 minute mein aise bolo", share: "LinkedIn par share karo",
-    download: "Image download karo", post: "LinkedIn pe post karo",
-    posted: { posted: "LinkedIn pe post ho gaya.", app: "LinkedIn pe bhej diya. Wahan Post dabao.", pasted: (key: string) => `Text aa gaya. Post mein ${key} dabao, image aa jayegi. Phir Post dabao.`, text: "Text aa gaya. Downloaded image attach karo, phir Post dabao." },
+    cheatsheet: "Cheatsheet", interview: "2 minute mein aise bolo",
     complete: "Mark complete", redo: "Yeh lesson phir se karo",
+    nextLesson: "Agla lesson", practise: "Extra exercises practise karo", practiseSub: "Zaroori nahi, par bahut recommended", practised: "Extra practice ho gayi. Kabhi bhi phir se karo.", extra: "Extra practice",
   },
 };
-type Ui = (typeof UI)["en"];
+export type Ui = (typeof UI)["en"];
 
 /** How many estimates landed within tolerance. */
 export function inRange(items: { answer: number; tolerance: number }[], mine: number[]) {
@@ -73,12 +68,13 @@ export function inRange(items: { answer: number; tolerance: number }[], mine: nu
  * counts the check, the estimates, the build, the design and the follow-ups.
  */
 function AssessmentHeader({ s, id, ui }: { s: CourseState; id: string; ui: Ui }) {
-  const n = assessmentStep(s, id);
-  const total = assessmentParts(id, s.lang).total;
+  const extra = PRACTICE_KEYS.includes(s.stage);
+  const n = extra ? practiceStep(s, id) : assessmentStep(s);
+  const total = extra ? practiceTotal(id, s.lang) : assessmentParts(id, s.lang).sizes.prove;
   return (
     <div className="flex flex-col gap-2.5 border-b border-sd-divider pb-3.5">
       <div className="flex items-end justify-between gap-3">
-        <span className="pb-1 text-[11px] font-extrabold tracking-[0.12em] uppercase text-sd-accent-700">{s.stage === "done" ? ui.dayComplete : ui.assessment}</span>
+        <span className="pb-1 text-[11px] font-extrabold tracking-[0.12em] uppercase text-sd-accent-700">{s.stage === "done" ? ui.dayComplete : extra ? ui.extra : ui.assessment}</span>
         {n > 0 && (
           <span aria-label={`Question ${n} of ${total}`} className="flex items-baseline gap-[3px] font-extrabold tracking-[-0.03em]">
             <span className="text-[34px] leading-none">{n}</span>
@@ -158,23 +154,50 @@ function Reveal({ c, ui, read, onRead }: { c: DayCopy; ui: Ui; read: boolean; on
   );
 }
 
-function Unlocked({ s, act, id, day, c, ui }: { s: CourseState; act: Act; id: string; day: Day; c: DayCopy; ui: Ui }) {
-  const [posted, setPosted] = useState("");
+/** The day's cheatsheet, point by point. */
+export function CheatsheetBlock({ c, ui }: { c: DayCopy; ui: Ui }) {
+  return (
+    <div>
+      <h6 className="sd-h6 mb-2">{ui.cheatsheet} · {c.cheatsheet.title}</h6>
+      <div className="border-t-2 border-sd-divider">
+        {c.cheatsheet.points.map((pt, i) => (
+          <div key={pt} className="grid grid-cols-[32px_1fr] gap-2.5 border-b border-sd-divider py-2.5 text-[15px] leading-[1.4]"><span className="font-extrabold text-sd-accent">{pad(i + 1)}</span><span>{pt}</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** "Say it in 2 minutes": the interview script. */
+export function InterviewBlock({ c, ui }: { c: DayCopy; ui: Ui }) {
+  return (
+    <div>
+      <h6 className="sd-h6 mb-2">{ui.interview}</h6>
+      <div className="flex flex-col gap-2 rounded-xl bg-sd-surface p-4 text-[15px] leading-[1.45]">{c.interview.map((l, i) => <span key={l}><b className="text-sd-accent">{i + 1}.</b> {l}</span>)}</div>
+    </div>
+  );
+}
+
+function Unlocked({ s, act, id, day, c, ui, practice, practised, hasNext, onPractise }: {
+  s: CourseState; act: Act; id: string; day: Day; c: DayCopy; ui: Ui;
+  practice: StepKey | null; practised: boolean; hasNext: boolean; onPractise: (k: StepKey) => void;
+}) {
   const user = useCourseUser();
   const p = s.lessons[id] ?? {};
-  const image = `/images/system-design/day-${day.day}-linkedin-${s.lang}.png`;
-  const file = `klymb-system-design-day-${day.day}.png`;
-  const shareImage = useShareImage(image, file, () => fetchImage(image));
-  const linkedIn = useLinkedInPost({
-    text: c.linkedin, image: shareImage, alt: c.cheatsheet.title, lang: s.lang, returnTo: `/learn/system-design?lesson=${id}`,
-    onShared: (how: LinkedInShare) => setPosted(how === "cancelled" ? "" : how === "pasted" ? ui.posted.pasted(pasteKey()) : ui.posted[how]),
-  });
-  const share = () => {
-    track("share", id, "done", { kind: "linkedin" });
-    linkedIn.share();
-  };
   return (
     <div className="flex flex-col gap-6">
+      <ShareCard lang={s.lang} id={id} day={day} c={c} shared={!!p.shared} onShared={() => act((q) => markShared(q, id))} />
+      <div className="flex flex-col gap-2">
+        <button type="button" onClick={() => act((q) => completeNext(q, false))} className="sd-btn sd-btn-primary h-14 justify-between gap-2 px-[18px] text-base">
+          <span className="flex items-center gap-2"><Icon name="check" size={16} />{hasNext ? ui.nextLesson : ui.complete}</span><Icon name="arrowR" size={18} />
+        </button>
+        {practice && (
+          <button type="button" onClick={() => onPractise(practice)} className="sd-btn sd-btn-secondary min-h-14 flex-col items-start justify-center gap-0 px-[18px] py-2 text-left">
+            <span className="text-base font-extrabold">{ui.practise}</span>
+            <span className="text-xs font-semibold text-sd-n-700">{practised ? ui.practised : ui.practiseSub}</span>
+          </button>
+        )}
+      </div>
       <div className="sd-a-pop flex items-end justify-between rounded-xl bg-sd-accent p-4 text-sd-bg">
         <div className="flex flex-col"><span className="sd-kicker">Day {day.day} complete</span><span className="text-[22px] font-extrabold tracking-[-0.02em]">{ui.scored(score(p.review?.[s.lang] ?? c.post, p.post ?? []), c.post.length)}</span></div>
         <Icon name="flame" size={32} />
@@ -186,32 +209,9 @@ function Unlocked({ s, act, id, day, c, ui }: { s: CourseState; act: Act; id: st
         </div>
       )}
       <Feedback lesson={id} day={day.day} lang={s.lang} sent={!!p.feedback} onSent={() => act((q) => updateLesson(q, id, { feedback: true }))} />
+      <CheatsheetBlock c={c} ui={ui} />
+      <InterviewBlock c={c} ui={ui} />
       <div>
-        <h6 className="sd-h6 mb-2">{ui.cheatsheet} · {c.cheatsheet.title}</h6>
-        <div className="border-t-2 border-sd-divider">
-          {c.cheatsheet.points.map((pt, i) => (
-            <div key={pt} className="grid grid-cols-[32px_1fr] gap-2.5 border-b border-sd-divider py-2.5 text-[15px] leading-[1.4]"><span className="font-extrabold text-sd-accent">{pad(i + 1)}</span><span>{pt}</span></div>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h6 className="sd-h6 mb-2">{ui.interview}</h6>
-        <div className="flex flex-col gap-2 rounded-xl bg-sd-surface p-4 text-[15px] leading-[1.45]">{c.interview.map((l, i) => <span key={l}><b className="text-sd-accent">{i + 1}.</b> {l}</span>)}</div>
-      </div>
-      <div>
-        <h6 className="sd-h6 mb-2">{ui.share}</h6>
-        {/* eslint-disable-next-line @next/next/no-img-element -- the same file the learner downloads */}
-        <img src={image} alt={c.cheatsheet.title} width={1080} height={1350} className="w-full max-w-[420px] border border-sd-divider" />
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <a href={image} download={file} onClick={() => track("share", id, "done", { kind: "image" })} className="sd-btn sd-btn-secondary h-11 gap-2"><Icon name="download" size={16} />{ui.download}</a>
-          <button type="button" onClick={share} className="sd-btn sd-btn-primary h-11">{ui.post}</button>
-        </div>
-        <p role="status" aria-live="polite" className="m-0 mt-2 text-[13px] empty:hidden">{posted}</p>
-        {linkedIn.connect}
-        {linkedIn.dialog}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={() => act((q) => completeNext(q, false))} className="sd-btn sd-btn-primary h-12 gap-2"><Icon name="check" size={16} />{ui.complete}</button>
         <button type="button" onClick={() => act((q) => ({ ...updateLesson(q, id, null), t: 0, playing: false, stage: "watch" }))} className="sd-btn sd-btn-ghost h-12">{ui.redo}</button>
       </div>
     </div>
@@ -225,7 +225,7 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
   const p: LessonProgress = s.lessons[id] ?? {};
   const steps = lessonSteps(s, id, day);
   const at = s.stage;
-  const after = (k: StepKey) => steps[steps.findIndex((x) => x.key === k) + 1]?.key ?? "done";
+  const after = (k: StepKey) => (k === "prove" ? "done" : steps[steps.findIndex((x) => x.key === k) + 1]?.key ?? "done");
   /** Moves on with a clean assessment: the next part starts at its first question, not where a previous run left off. */
   const go = (k: StepKey) => act((q) => ({ ...q, stage: k, checkStage: k === "prove" ? "intro" : q.checkStage, checkIdx: 0, estIdx: 0, fuIdx: 0 }));
   /** Saves the step and moves the column on to the next one. */
@@ -235,6 +235,8 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
   });
   const onward = (k: StepKey) => ui.toNext(ui.steps[after(k)]);
   const nextLesson = ALL_IDS[ALL_IDS.indexOf(id) + 1];
+  const practice = practiceStart(s, id);
+  const practised = steps.filter((x) => PRACTICE_KEYS.includes(x.key)).every((x) => x.done);
 
   return (
     <div data-tour="practice" className="flex flex-1 flex-col">
@@ -283,7 +285,7 @@ export function LessonStage({ s, act, id, day }: { s: CourseState; act: Act; id:
             : <FollowUps key={s.lang} items={c.followUps} lang={s.lang} idx={s.fuIdx} onIdx={(fuIdx) => act((q) => ({ ...q, fuIdx }))} onDone={(follow) => set({ follow }, "done")} />
         ) : null}
 
-        {at === "done" && <Unlocked s={s} act={act} id={id} day={day} c={c} ui={ui} />}
+        {at === "done" && <Unlocked s={s} act={act} id={id} day={day} c={c} ui={ui} practice={practice} practised={practised} hasNext={!!nextLesson} onPractise={go} />}
       </div>
     </div>
   );

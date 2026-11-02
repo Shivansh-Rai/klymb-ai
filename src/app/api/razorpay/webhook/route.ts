@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { recordPaid, recordRefund } from "@/lib/payments";
 import { webhookAction, webhookSignatureValid } from "@/lib/razorpay-webhook";
 import { sendReceiptOnce } from "@/lib/receipt";
+import { creditReferrer } from "@/lib/referrals";
 
 /**
  * Razorpay's server-to-server confirmation.
@@ -32,6 +33,11 @@ export async function POST(req: Request) {
     if (error) {
       console.error("webhook paid update failed:", action.orderId, error.code);
       return NextResponse.json({ error: "Retry" }, { status: 500 }); // Razorpay retries non-2xx
+    }
+    const credit = await creditReferrer(sql, action.orderId);
+    if (credit.error) {
+      console.error("webhook referral credit failed:", action.orderId, credit.error.code);
+      return NextResponse.json({ error: "Retry" }, { status: 500 });
     }
     after(() => sendReceiptOnce(action.orderId));
   } else if (action.kind === "failed") {

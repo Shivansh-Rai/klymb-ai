@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { badges, dayOf, defaultState, openLesson, streak, type CourseState } from "@/lib/course-app";
 import { Icon } from "../icons";
+import { ReferralCard, useReferral } from "../Referral";
 import { Segmented, Stats, Toggle } from "../ui";
 import type { Act } from "../useCourseApp";
 import { GoogleButton, useCourseUser } from "../user";
@@ -31,6 +32,7 @@ function LinkRow({ label, sub, onClick }: { label: string; sub: string; onClick:
 
 export function Profile({ s, act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
+  const referral = useReferral();
   const flip = (k: BoolKey) => () => act((p) => ({ ...p, [k]: !p[k] }));
   const tog = (k: BoolKey, label: string, sub?: string) => <Row><Toggle on={s[k]} onClick={flip(k)} label={label} sub={sub} /></Row>;
   const st = streak(s);
@@ -64,6 +66,7 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
         </div>
       </div>
       <Stats className="lg:max-w-[520px]" items={[[st.current, "day streak"], [s.done.length, "lessons done"], [badges(s).filter((b) => b.on).length, "badges"]]} />
+      {referral && <ReferralCard r={referral} className="lg:max-w-[520px]" />}
       <div className="grid grid-cols-1 items-start gap-y-6 lg:grid-cols-2 lg:gap-x-10">
         {groups.map(([label, rows]) => (
           <section key={label} aria-label={label}>

@@ -9,9 +9,9 @@ import { OfferBackdrop } from "./OfferBackdrop";
 const STATS = [["21", "days"], ["15 min", "a day"], ["5", "days of AI design"]];
 
 /** The System Design offer: the promise on the left, the price and the claim form on the right. */
-export function OfferView({ offer, email, name, phone, linkedin, role, campaign, resume, signInFailed, inApp }: {
+export function OfferView({ offer, email, name, phone, linkedin, role, campaign, referral, resume, signInFailed, inApp }: {
   offer: SdOfferState; email: string | null; name: string; phone: string; linkedin: string; role: SdRole | ""; campaign: string | null;
-  resume: boolean; signInFailed: boolean; inApp: boolean;
+  referral: { code: string; invitedBy: string } | null; resume: boolean; signInFailed: boolean; inApp: boolean;
 }) {
   return (
     <OfferBackdrop>
@@ -39,7 +39,7 @@ export function OfferView({ offer, email, name, phone, linkedin, role, campaign,
         </div>
 
         <div className="sd-offer-right flex flex-col gap-4">
-          <ClaimCard offer={offer} email={email} name={name} phone={phone} linkedin={linkedin} role={role} campaign={campaign} resume={resume} signInFailed={signInFailed} inApp={inApp} />
+          <ClaimCard offer={offer} email={email} name={name} phone={phone} linkedin={linkedin} role={role} campaign={campaign} referral={referral} resume={resume} signInFailed={signInFailed} inApp={inApp} />
           <div className="flex flex-col gap-1.5 text-[13px] leading-[1.4] text-[#b9ad9f]">
             <a href="#course-intro" className="font-bold text-[#f3d48a] underline underline-offset-4">Not sure yet? Watch the 2-minute course intro, free</a>
             <p className="m-0 text-xs">

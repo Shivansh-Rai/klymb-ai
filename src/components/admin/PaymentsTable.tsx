@@ -5,6 +5,7 @@ import { refund } from "@/app/admin/payment-actions";
 import { daysUntilCohortEnds, REFUND_EMAIL } from "@/lib/admin/access";
 import type { PaymentRow } from "@/lib/admin/data";
 import { formatINR } from "@/lib/format";
+import { SD_COURSE, SD_REFERRAL } from "@/lib/sd-offer";
 
 const dateTime = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
@@ -43,7 +44,10 @@ export function PaymentsTable({ rows, canRefund }: { rows: PaymentRow[]; canRefu
           {shown.map((p) => (
             <tr key={p.id} className="border-b border-line/20 last:border-0">
               <td className="px-4 py-3 whitespace-nowrap">{dateTime(p.created_at)}</td>
-              <td className="px-4 py-3">{p.email}</td>
+              <td className="px-4 py-3">
+                {p.email}
+                {p.referred_by && <span className="block text-xs text-muted">Referred by {p.referred_by}</span>}
+              </td>
               <td className="px-4 py-3">{p.track}</td>
               <td className="px-4 py-3 font-bold">{formatINR(p.amount / 100)}</td>
               <td className="px-4 py-3 font-mono text-xs">{p.razorpay_payment_id}</td>
@@ -54,6 +58,18 @@ export function PaymentsTable({ rows, canRefund }: { rows: PaymentRow[]; canRefu
       </table>
     </div>
     </div>
+  );
+}
+
+/** Where a paid System Design buyer stands on referrals. A friend whose seat ended stops counting, so this is what to check before refunding. */
+function ReferralBadge({ payment }: { payment: PaymentRow }) {
+  const { friends, referral_earned_at: earned } = payment;
+  if (friends === null || (!friends && !earned)) return null;
+  const due = friends >= SD_REFERRAL.friends;
+  return (
+    <span className={`text-xs font-bold ${due ? "text-red-deep" : "text-muted"}`}>
+      {Math.min(friends, SD_REFERRAL.friends)}/{SD_REFERRAL.friends} friends{due ? ", refund due" : earned ? ": a friend's seat ended" : ""}
+    </span>
   );
 }
 
@@ -78,15 +94,18 @@ function RefundCell({ payment, canRefund }: { payment: PaymentRow; canRefund: bo
     return (
       <span className="flex flex-col items-start gap-0.5">
         <span className="text-xs font-bold uppercase tracking-wider text-ink">Paid</span>
+        <ReferralBadge payment={payment} />
         <span className="text-xs text-muted">Refunds only from {REFUND_EMAIL}</span>
       </span>
     );
   }
-  const daysLeft = daysUntilCohortEnds(payment.cohort_start);
+  // System Design has no cohort: its cohort_start is just the day of the order.
+  const daysLeft = payment.track === SD_COURSE ? 0 : daysUntilCohortEnds(payment.cohort_start);
 
   return (
     <span className="flex flex-col items-start gap-1">
       <span className="text-xs font-bold uppercase tracking-wider text-ink">Paid</span>
+      <ReferralBadge payment={payment} />
       {confirming ? (
         <>
           {daysLeft > 0 && (
