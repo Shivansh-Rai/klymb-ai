@@ -346,14 +346,14 @@ export function sdReminderEmail(p: {
 }) {
   const site = esc(p.siteUrl);
   const lesson = p.target.kind === "lesson" ? p.target : null;
-  // One emoji and plain words: caps, emoji runs and "URGENT" are what send a mail to Promotions or spam.
-  // The name only when we know it: "waiting for you, there" reads like a mail merge gone wrong.
-  const you = p.name && p.name !== "there" ? `, ${p.name}` : "";
+  // Plain words, no emoji and no name: caps, emoji and "URGENT" are what send a mail to Promotions or spam.
   const subject = !lesson
-    ? `⏰ Reminder: one step left${you}. Your System Design final assessment is waiting`
+    ? "Reminder: your System Design final assessment is waiting"
     : p.behind > 1
-      ? `⏰ Reminder: ${p.behind} System Design lessons are waiting for you${you}`
-      : `⏰ Reminder: "${lesson.title}" is waiting for you${you}`;
+      ? `Reminder: ${p.behind} System Design lessons are waiting for you`
+      : `Reminder: "${lesson.title}" is waiting for you`;
+  // "Hello Suyash," when we know the name, else "Hello there,".
+  const hello = `Hello ${p.name || "there"},`;
   const intro = lesson
     ? p.behind > 1
       ? `You have ${p.behind} lessons waiting. Start with this one: about ${lesson.minutes} minutes, and its check counts toward your 100% refund.`
@@ -370,7 +370,7 @@ export function sdReminderEmail(p: {
       ];
   const cta = lesson ? "Open the lesson" : "Take the assessment";
   const text = [
-    `Hi ${p.name},`, "", intro, "",
+    hello, "", intro, "",
     ...points.map((s, i) => `${i + 1}. ${s.title}: ${s.body}`), "",
     `${cta}: ${p.url}`, "",
     `Turn off these reminders: ${p.unsubscribeUrl}`, "", "Team Klymb.ai",
@@ -379,7 +379,7 @@ export function sdReminderEmail(p: {
     site, supportEmail: p.supportEmail,
     preview: lesson ? `About ${lesson.minutes} minutes. Pick up where you left off.` : "The last step to finishing System Design.",
     eyebrow: "System Design",
-    title: lesson ? `Ready when you are, ${esc(p.name)}.` : `One step left, ${esc(p.name)}.`,
+    title: esc(hello),
     intro: esc(intro),
     sections: [
       `${sectionTitle(lesson ? "Tonight's lesson" : "Final assessment")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
