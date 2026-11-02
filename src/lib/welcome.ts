@@ -24,6 +24,6 @@ export async function sendWelcome({ email, name, track }: { email: string; name:
     siteUrl: site.url,
     supportEmail: grievance.email,
   });
-  const sent = await sendMail({ to: { email, name }, ...mail });
+  const sent = await sendMail({ to: { email, name }, ...mail, kind: "registration.welcome" });
   if (!sent.ok) console.error("welcome email failed:", sent.reason);
 }

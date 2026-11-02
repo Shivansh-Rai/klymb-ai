@@ -6,7 +6,8 @@ import { getTrack } from "@/data/tracks";
 import { hasPaid } from "@/lib/access";
 import { formatINR } from "@/lib/format";
 import { dueFollowup, FOLLOWUP_DONE } from "@/lib/followups";
-import { noteEmail, sendMail } from "@/lib/mail";
+import { mailReady, noteEmail, sendMail } from "@/lib/mail";
+import { inviteSdPreregistrations } from "@/lib/sd-invites";
 import { db } from "@/lib/db/client";
 import { refreshCommitDays } from "@/lib/learner/commits";
 import { LAUNCH_OFFER, offerOpen, priceNow } from "@/lib/offer";
@@ -41,9 +42,12 @@ export async function GET(req: Request) {
   // this never competes with learners submitting work for GitHub's API budget.
   const commits = await refreshCommitDays(sql);
 
-  if (!process.env.BREVO_API_KEY) {
+  if (!mailReady()) {
     return NextResponse.json({ maintenance: pruned.data ?? [], commits, sent: 0, skipped: "email not configured" });
   }
+
+  // System Design pre-registrants: "it's open, your price is held", once each, when switched on.
+  const sdInvites = await inviteSdPreregistrations(sql);
 
   const now = new Date();
   const { data: rows, error } = await sql.rows<{
@@ -88,10 +92,17 @@ export async function GET(req: Request) {
       listPrice: track.price,
       offer: offerOpen(now),
     });
-    const result = await sendMail({ to: { email: r.email, name: r.name ?? undefined }, ...mail });
+    const result = await sendMail({
+      to: { email: r.email, name: r.name ?? undefined },
+      ...mail,
+      kind: `registration.followup.${step}`,
+      idempotencyKey: `${r.id}:${step}`,
+    });
     if (result.ok) sent++;
     else {
       console.error("follow-up failed:", r.id, step, result.reason);
+      // A suppressed address won't take it on a retry either, so the claim stays.
+      if (result.skipped) continue;
       // Release the claim so the next run can try again.
       await sql.run`
         update course.registrations set followup_stage = ${r.followup_stage}
@@ -100,7 +111,7 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ checked: rows?.length ?? 0, sent, closed, maintenance: pruned.data ?? [], commits });
+  return NextResponse.json({ checked: rows?.length ?? 0, sent, closed, sdInvites, maintenance: pruned.data ?? [], commits });
 }
 
 function followupEmail(
