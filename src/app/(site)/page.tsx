@@ -6,6 +6,7 @@ import { CareerTracks } from "@/components/home/CareerTracks";
 import { Evidence } from "@/components/home/Evidence";
 import { FaqJoin } from "@/components/home/FaqJoin";
 import { StickyEnrolBar } from "@/components/home/StickyEnrolBar";
+import { SystemDesignFeature } from "@/components/home/SystemDesignFeature";
 import { WhyRefund } from "@/components/home/WhyRefund";
 import { allFree } from "@/data/tracks";
 import { Hero } from "@/components/home/Hero";
@@ -26,6 +27,7 @@ export default async function HomePage() {
   return (
     <>
       <Hero />
+      <SystemDesignFeature />
       <ExpertsStrip className="border-y border-line/30 bg-white py-8 sm:py-9" />
       <StatementBand>{statement}</StatementBand>
       <LazyPromoFilm />

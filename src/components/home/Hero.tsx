@@ -3,6 +3,8 @@ import { allFree } from "@/data/tracks";
 import Image from "next/image";
 import Link from "next/link";
 import { hero, navLinks } from "@/data/program";
+import { formatINR } from "@/lib/format";
+import { SD_OFFER, sdOfferState } from "@/lib/sd-offer";
 import { ProductsMenu } from "@/components/layout/ProductsMenu";
 import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -86,6 +88,7 @@ function TabSide({ flip }: { flip?: boolean }) {
 }
 
 export function Hero() {
+  const { open: offerOpen, price } = sdOfferState(null);
   return (
     <section aria-labelledby="hero-title" className="pointer-events-none relative mx-auto max-w-[92rem] px-4 pb-16 sm:px-6 lg:-mt-16 lg:px-8">
       {/* The section is raised into the header (lg:-mt-16), so its empty space
@@ -115,7 +118,17 @@ export function Hero() {
         {/* A red light that leans towards the pointer; desktop only. */}
         <LightCanvas mode="beam" />
         <div className="relative grid gap-10 p-8 pb-0 sm:p-12 sm:pb-0 lg:grid-cols-[0.9fr_1.1fr] lg:gap-4 lg:py-0 lg:pr-0 lg:pl-16">
-          <div className="lg:self-center lg:py-12">
+          <div className="lg:self-center lg:py-8">
+            <Appear>
+              {/* System Design's way in above the fold; its full section is under the hero. */}
+              <Link href="/system-design" className="group mb-5 inline-flex max-w-full items-center gap-2 rounded-full bg-[#1a1716] py-1.5 pr-3.5 pl-1.5 text-xs font-bold text-[#fbf6ee] transition-transform duration-150 active:scale-[0.97]">
+                <span className="rounded-full bg-[#e7c97a] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#2a1d05]">New</span>
+                <span className="whitespace-nowrap">
+                  System Design{offerOpen && <> · {formatINR(price)}<span className="hidden sm:inline"> until {SD_OFFER.endsLabel}</span></>}
+                </span>
+                <span aria-hidden="true" className="transition-transform duration-150 group-hover:translate-x-0.5">→</span>
+              </Link>
+            </Appear>
             <Appear><Eyebrow>{hero.eyebrow}</Eyebrow></Appear>
             <h1 id="hero-title" className="display mt-5 text-[clamp(2.5rem,4.6vw,4rem)]">
               <Appear delay={0.08} y={24}><span className="block">Become</span></Appear>
