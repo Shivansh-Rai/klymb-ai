@@ -50,6 +50,8 @@ export async function POST(req: Request) {
   const mail = await sendMail({
     to: { email: SUPPORT_EMAIL, name: "Klymb team" },
     replyTo: email,
+    kind: "support.ticket",
+    ...(data?.id ? { idempotencyKey: data.id } : {}),
     subject: `Kamran help request from ${name || email}`,
     text: `${message}\n\nFrom: ${name} <${email}>\nPage: ${page}\n${lines.join("\n")}`,
     html: `<p style="white-space:pre-wrap">${esc(message)}</p><hr><p>From: ${esc(name)} &lt;${esc(email)}&gt;<br>Page: ${esc(page)}<br>${lines.map(esc).join("<br>")}</p><p>Reply to the learner at ${esc(email)}.</p>`,
