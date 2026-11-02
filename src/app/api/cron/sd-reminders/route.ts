@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { site } from "@/data/config";
 import { grievance } from "@/data/legal";
 import { db } from "@/lib/db/client";
+import { normaliseEmail } from "@/lib/email";
 import { todayInIndia } from "@/lib/learn";
 import { mailReady, sdReminderEmail, sendMail } from "@/lib/mail";
 import { SD_COURSE } from "@/lib/sd-offer";
@@ -34,8 +35,12 @@ export async function GET(req: Request) {
   if (!mailReady()) return NextResponse.json({ sent: 0, skipped: "email not configured" });
 
   const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
-  // ?force=1 skips the hour, for testing on a local machine only.
-  const force = process.env.NODE_ENV !== "production" && new URL(req.url).searchParams.get("force") === "1";
+  // For testing on a local machine only: ?force=1 skips the hour, and
+  // ?only=<email> sends to that one learner, so a real run mails nobody else.
+  const local = process.env.NODE_ENV !== "production";
+  const params = new URL(req.url).searchParams;
+  const force = local && params.get("force") === "1";
+  const only = local ? normaliseEmail(params.get("only")) : null;
   if (hour < EARLIEST_IST_HOUR && !force) return NextResponse.json({ sent: 0, skipped: `before ${EARLIEST_IST_HOUR}:00 IST` });
   const today = todayInIndia();
 
@@ -51,6 +56,7 @@ export async function GET(req: Request) {
      where e.course = ${SD_COURSE} and e.status = 'active'
        and e.finished_at is null and e.reminders_off_at is null
        and (e.reminded_on is null or e.reminded_on < ${today}::date)
+       and (${only}::text is null or e.email = ${only})
   `;
   // 42703: the columns aren't there, so 0021_sd_mail.sql hasn't run here.
   if (error) return NextResponse.json({ error: error.code === "42703" ? "Run npm run db:migrate (0021_sd_mail.sql)." : error.message }, { status: 500 });
