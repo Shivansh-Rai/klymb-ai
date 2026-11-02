@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { createContext, useContext } from "react";
-import { courseSignIn } from "@/app/(course)/learn/system-design/actions";
+import { courseSignIn, courseSignOut } from "@/app/(course)/learn/system-design/actions";
 import { GoogleMark } from "@/components/ui/GoogleMark";
 import { track } from "./track";
 
@@ -22,6 +22,15 @@ export function GoogleButton({ lesson, where, label = "Continue with Google", cl
       <button type="submit" className={clsx("sd-btn sd-btn-secondary w-full gap-3 bg-white", className)}>
         <GoogleMark />{label}
       </button>
+    </form>
+  );
+}
+
+/** Logs out. Lesson passes stay on the account; what this device keeps stays here. */
+export function LogOutButton() {
+  return (
+    <form action={courseSignOut}>
+      <button type="submit" className="sd-btn sd-btn-secondary w-full bg-white">Log out</button>
     </form>
   );
 }

@@ -82,3 +82,9 @@ test("the final is shut until it's open, and a score this browser kept with no t
   assert.match(openFinal(s, NOW).toast ?? "", /day after you pass Day 21/);
   assert.equal(paceOf(progress(), NOW).finalOpen, false);
 });
+
+test("lesson checks don't depend on the final's table: code can go live before its migration", () => {
+  const progress = readFileSync("src/lib/sd-progress.ts", "utf8");
+  assert.match(progress, /UNDEFINED_TABLE = "42P01"/);
+  assert.match(progress, /noFinals \? null : finals\.error/);
+});
