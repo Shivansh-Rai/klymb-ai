@@ -257,9 +257,11 @@ everyone else why they have none. `/learn/system-design?start=refer` previews a 
 screen from any seat. A browser keeps a code for 14 days (`RememberReferral`), so a
 friend who comes back without the link still counts.
 
-**Deploying.** Run `npm run db:migrate` before the code goes live. Until it has run
-nobody can buy: the order route stops rather than take money it can't record a seat
-for. To give someone free access:
+**Deploying.** A production deploy runs `npm run db:migrate` before it builds
+(`scripts/vercel-build.sh`), so merging a migration applies it to the live database.
+If it fails, the build fails and the live version stays up. Migrations run before the
+new code is live, so old code has to keep working with them: add, don't rename or drop.
+To give someone free access:
 
 ```sql
 insert into course.enrollments (email, course, source) values ('name@gmail.com', 'system-design', 'grant');

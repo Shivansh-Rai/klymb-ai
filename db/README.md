@@ -133,6 +133,17 @@ commits.
 
 ## Adding a migration
 
+Merging one to `main` applies it to production: Vercel runs `scripts/vercel-build.sh`
+on every production deploy, which migrates and then builds. That needs
+`DATABASE_MIGRATE_URL` in Vercel, set for Production only and on the direct host,
+because the runner's lock doesn't hold through `-pooler`. Without it the build stops
+and the live version stays up. Previews never migrate, because they share this
+database.
+
+The migration goes in before the new code does, while the old code is still serving
+learners, and this database serves app.klymb.ai too. So add rather than rename or
+drop, and keep anything that locks a busy table out of an ordinary migration.
+
 A new numbered file in `db/migrations/`. Never edit an applied one — the runner
 warns when a file's checksum has changed, because the next environment will hit
 it as a schema difference. Tables created later are usable by the app without
