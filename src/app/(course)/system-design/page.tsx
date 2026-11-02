@@ -7,17 +7,15 @@ import { OfferView } from "@/components/system-design-offer/OfferView";
 import { hasCourseAccess } from "@/lib/access";
 import { db } from "@/lib/db/client";
 import { inviterFor } from "@/lib/referrals";
-import { SD_COURSE, campaignOf, inAppBrowser, refOf, sdOfferState, type SdRole } from "@/lib/sd-offer";
+import { SD_COURSE, campaignOf, inAppBrowser, refOf, sdOfferOpen, sdOfferState, type SdRole } from "@/lib/sd-offer";
 
-const title = "System Design · Early Diwali offer";
 const description = "System design, explained with real examples. Built for interviews.";
 
-export const metadata: Metadata = {
-  title,
-  description,
-  openGraph: { title, description },
-  twitter: { title, description },
-};
+/** Read per request, so the title stops naming the offer when the offer stops. */
+export function generateMetadata(): Metadata {
+  const title = sdOfferOpen() ? "System Design · Early Diwali offer" : "System Design";
+  return { title, description, openGraph: { title, description }, twitter: { title, description } };
+}
 
 export const viewport: Viewport = { themeColor: "#1a1716" };
 

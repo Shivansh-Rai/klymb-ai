@@ -4,9 +4,9 @@ import { QUESTIONS } from "../src/data/system-design/course-app";
 import { LESSON_DAYS } from "../src/data/system-design/lessons";
 import { lessonContent } from "../src/lib/sd-lessons";
 import {
-  ALL_IDS, addNote, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
-  markShared, migrateLegacy, miniActive, nextQuestion, nextStep, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
-  setLessons, updateLesson, type CourseState,
+  ALL_IDS, addNote, checkStageFor, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
+  markShared, migrateLegacy, miniActive, nextQuestion, nextStep, openFinal, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
+  setLessons, updateLesson, withServerPasses, type CourseState,
 } from "../src/lib/course-app";
 
 // The app gets its lessons from the server; these tests take the full set, as a seat holder does.
@@ -199,12 +199,11 @@ test("notes are pinned to the current lesson and moment", () => {
   assert.equal(s.draft, "");
 });
 
-test("a first visit has no sample learner, but the inbox opens with the sample notifications", () => {
+test("a first visit has no sample learner, and an empty inbox", () => {
   const s = defaultState(NOW);
   assert.deepEqual(s.done, []);
   assert.deepEqual(s.pre, []);
-  assert.equal(s.notifs.length, 5);
-  assert.equal(s.notifs.filter((n) => n.unread).length, 2);
+  assert.deepEqual(s.notifs, []);
   assert.equal(s.cur, "0-0");
   assert.equal(streak(s, NOW).current, 0);
 });
@@ -313,4 +312,38 @@ test("sharing is remembered without counting as a step of the day", () => {
   assert.deepEqual(shared.lessons["0-1"].post, [0, 0, 0, 0, 0], "the rest of the progress stays");
   assert.deepEqual(shared.activeDays, [], "no streak day for a share");
   assert.equal(markShared(shared, "0-1"), shared, "sharing twice changes nothing");
+});
+
+test("old sample messages saved in a browser don't come back", () => {
+  const stale = { onboarded: true, notifs: [{ id: 1, type: "reply", title: "Klymb team replied", body: "", time: "", group: "Today", unread: true, go: "player" }] };
+  assert.deepEqual(fromStored(stale, NOW).notifs, []);
+  assert.equal("notifs" in toStored(home()), false);
+});
+
+test("the final assessment stays shut until every lesson is finished", () => {
+  const early = openFinal({ ...home(), done: ["0-0", "0-1"] }, NOW);
+  assert.equal(early.screen, "home");
+  assert.equal(early.toast, "The final assessment opens after Day 21");
+  assert.equal(openFinal({ ...home(), done: ALL_IDS }, NOW).screen, "quiz");
+  assert.equal(openFinal({ ...home(), post: [1, 1, 1, 1, 1, 1] }, NOW).screen, "results");
+});
+
+test("passes on the server bring a new device up to where the learner was", () => {
+  const s = withServerPasses(home(), { "0-0": 80 });
+  assert.deepEqual(s.done, ["0-0"]);
+  assert.equal(s.cur, "0-1");
+  assert.equal(flowDone(s, "0-0"), true);
+  assert.equal(s.lessons["0-0"].check, 80);
+  assert.equal(revisitable(s, "0-0"), true);
+  assert.equal(checkStageFor(s.lessons["0-0"]), "passed");
+  assert.equal(openLesson(s, "0-1", NOW).screen, "player");
+});
+
+test("passes from the server never disturb what this browser already holds", () => {
+  const here = updateLesson(home(), "0-0", { watched: true, post: [1, 2, 3, 4, 0], check: 100, checkPicks: [1, 2, 3, 4, 0] }, NOW);
+  assert.equal(withServerPasses(here, { "0-0": 80 }), here);
+  assert.equal(withServerPasses(home(), {}).done.length, 0);
+  const elsewhere = { ...home(), cur: "0-1" };
+  assert.equal(withServerPasses(elsewhere, { "0-0": 80 }).cur, "0-1");
+  assert.deepEqual(withServerPasses(home(), { "0-9": 80 }).done, []);
 });

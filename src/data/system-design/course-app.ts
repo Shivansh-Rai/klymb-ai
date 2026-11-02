@@ -117,14 +117,8 @@ export interface Notif {
   go: NotifTarget;
 }
 
-/** The inbox's messages. Until there is a backend to send them, these are the examples the design ships with. */
-export const NOTIFICATIONS: Notif[] = [
-  { id: 1, type: "reply", title: "Klymb team replied", body: "“If I have auto-scaling, why pre-scale at all?”", time: "12 min ago", group: "Today", unread: true, go: "player" },
-  { id: 2, type: "streak", title: "Your 6-day streak is waiting", body: "One lesson step keeps it.", time: "2 h ago", group: "Today", unread: true, go: "progress" },
-  { id: 3, type: "badge", title: "Badge earned: First pass", body: "First lesson check passed.", time: "Yesterday", group: "Earlier", unread: false, go: "progress" },
-  { id: 4, type: "module", title: "Day 3 is out", body: "Why applications slow down · 15 min", time: "2 days ago", group: "Earlier", unread: false, go: "course" },
-  { id: 5, type: "assess", title: "Your retake is open", body: "Day 1 rewatched. Try again.", time: "4 days ago", group: "Earlier", unread: false, go: "player" },
-];
+/** The inbox's messages. Empty until there is a backend to send real ones: a learner must never read a made-up reply. */
+export const NOTIFICATIONS: Notif[] = [];
 
 /** The welcome screen: what the course gives you, before Day 1. [title, detail] */
 export const WELCOME: [string, string][] = [

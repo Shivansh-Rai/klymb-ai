@@ -162,7 +162,14 @@ function Notes({ s, act }: { s: CourseState; act: Act }) {
 /** Every lesson of the course, by module, with the current one scrolled into view. */
 function CourseLessons({ s, act }: { s: CourseState; act: Act }) {
   const here = useRef<HTMLButtonElement>(null);
-  useEffect(() => { here.current?.scrollIntoView({ block: "nearest" }); }, []);
+  // Inside the panel only: scrollIntoView would also move the page behind it, away from the step on screen.
+  useEffect(() => {
+    const row = here.current;
+    const panel = row?.closest<HTMLElement>("[data-lesson-panel]");
+    if (!row || !panel) return;
+    const top = row.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+    if (top < 0 || top + row.offsetHeight > panel.clientHeight) panel.scrollTop += top;
+  }, []);
   return (
     <div className="flex flex-col px-5 py-3.5 lg:px-3.5 lg:pt-2">
       {MODULES.map((m, mi) => (
@@ -270,7 +277,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
             ))}
           </div>
           {/* One height for every tab, so switching never changes the page's length and the tabs stay where they are. */}
-          <div className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
+          <div data-lesson-panel className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
             {s.ptab === "lessons" && <CourseLessons s={s} act={act} />}
             {s.ptab === "qna" && day && <Community key={s.cur} lesson={s.cur} day={day} lang={s.lang} />}
             {s.ptab === "notes" && <Notes s={s} act={act} />}
