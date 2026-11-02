@@ -105,7 +105,8 @@ export async function GET(req: Request) {
       to: { email: l.email, name: l.name ?? undefined },
       ...mail,
       kind: lesson ? "sd.reminder.lesson" : "sd.reminder.assessment",
-      idempotencyKey: `${l.email}:${today}`,
+      // Once a day per learner. A local ?only= test gets a fresh key each run, or ABT-Mailer would drop the repeat as a duplicate.
+      idempotencyKey: only ? `test:${l.email}:${Date.now()}` : `${l.email}:${today}`,
       // One-click unsubscribe (RFC 8058), which Gmail and Yahoo expect on recurring mail.
       headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     });
