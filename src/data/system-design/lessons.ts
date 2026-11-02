@@ -6,11 +6,18 @@
  */
 import { essentialsDayOne } from "./essentials-day-1";
 import { essentialsDayTwo } from "./essentials-day-2";
+import { essentialsDayThree } from "./essentials-day-3";
+import { essentialsDayFour } from "./essentials-day-4";
+import { essentialsDayFive } from "./essentials-day-5";
+import { essentialsDaySix } from "./essentials-day-6";
+import { essentialsDaySeven } from "./essentials-day-7";
+import { essentialsDayTen } from "./essentials-day-10";
+import { essentialsDayTwelve } from "./essentials-day-12";
 import type { QuickCheck } from "./course-app";
 import type { Day } from "./types";
 
 /** Every built lesson in full, by lesson id ("module-lesson", zero-based). */
-export const LESSON_DAYS: Record<string, Day> = { "0-0": essentialsDayOne, "0-1": essentialsDayTwo };
+export const LESSON_DAYS: Record<string, Day> = { "0-0": essentialsDayOne, "0-1": essentialsDayTwo, "0-2": essentialsDayThree, "0-3": essentialsDayFour, "0-4": essentialsDayFive, "0-5": essentialsDaySix, "0-6": essentialsDaySeven, "1-1": essentialsDayTen, "1-3": essentialsDayTwelve };
 
 /** Ungraded in-video questions, by lesson id. None of the lessons has one yet. */
 export const QUICK_CHECKS: Record<string, QuickCheck> = {};

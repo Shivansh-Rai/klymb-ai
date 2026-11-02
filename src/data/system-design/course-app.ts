@@ -60,7 +60,7 @@ export const MODULES: CourseModule[] = [
 ];
 
 /** The lessons that exist, by lesson id ("module-lesson", zero-based). Every other lesson is coming soon. */
-export const BUILT_LESSONS = ["0-0", "0-1"];
+export const BUILT_LESSONS = ["0-0", "0-1", "0-2", "0-3", "0-4", "0-5", "0-6", "1-1", "1-3"];
 /** Open to everyone. None: the course overview video is the free part, and every lesson needs a seat. */
 export const FREE_LESSONS: string[] = [];
 
