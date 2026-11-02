@@ -6,6 +6,8 @@ import { hasPaid } from "@/lib/access";
 import { formatINR } from "@/lib/format";
 import { dueFollowup, FOLLOWUP_DONE } from "@/lib/followups";
 import { MAIL_SUPPORT, mailReady, noteEmail, sendMail } from "@/lib/mail";
+import { normaliseEmail } from "@/lib/email";
+import { followUpSdClaims } from "@/lib/sd-followups";
 import { inviteSdPreregistrations } from "@/lib/sd-invites";
 import { db } from "@/lib/db/client";
 import { refreshCommitDays } from "@/lib/learner/commits";
@@ -18,8 +20,12 @@ const BATCH = 60;
  * Hourly (GitHub Actions, .github/workflows/followups.yml). Emails people who
  * registered for a paid track but haven't paid, 1 hour, 1 day and 3 days after
  * registering. Each step is claimed before sending, so a retried run never
- * sends it twice; paying, or a free track, ends the sequence. Requires
+ * sends it twice; paying, or a free track, ends the sequence. System Design
+ * claims that weren't paid get the same three (lib/sd-followups). Requires
  * CRON_SECRET as a bearer token.
+ *
+ * On a local machine only, ?only=<email> runs just the System Design
+ * follow-up for that one address, so a test mails nobody else.
  */
 export async function GET(req: Request) {
   if (!isCronRequest(req)) {
@@ -44,6 +50,11 @@ export async function GET(req: Request) {
   if (!mailReady()) {
     return NextResponse.json({ maintenance: pruned.data ?? [], commits, sent: 0, skipped: "email not configured" });
   }
+
+  const only = process.env.NODE_ENV !== "production" ? normaliseEmail(new URL(req.url).searchParams.get("only")) : null;
+  // System Design claims that weren't paid: 1 hour, 1 day, 3 days.
+  const sdFollowups = await followUpSdClaims(sql, new Date(), only);
+  if (only) return NextResponse.json({ only, sdFollowups });
 
   // System Design pre-registrants: "it's open, your price is held", once each, when switched on.
   const sdInvites = await inviteSdPreregistrations(sql);
@@ -110,7 +121,7 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ checked: rows?.length ?? 0, sent, closed, sdInvites, maintenance: pruned.data ?? [], commits });
+  return NextResponse.json({ checked: rows?.length ?? 0, sent, closed, sdInvites, sdFollowups, maintenance: pruned.data ?? [], commits });
 }
 
 function followupEmail(

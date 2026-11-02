@@ -13,7 +13,8 @@ const BATCH = 60;
  * The "System Design is open, your price is held" mail, to people who
  * pre-registered before the course took payments. Those are the rows with
  * consent: the claim form that replaced pre-registration stores consent as
- * false, so it never adds to this list.
+ * false, so it never adds to this list. Someone who has started a checkout
+ * gets the unpaid-claim follow-ups (lib/sd-followups) instead, never both.
  *
  * Once each: a row is claimed by setting invited_at before the send, and
  * released only if the send fails. Off unless SD_INVITE_PREREGISTERED is
@@ -29,6 +30,9 @@ export async function inviteSdPreregistrations(sql: Db, env: Record<string, stri
        and not exists (
          select 1 from course.enrollments e
           where e.email = p.email and e.course = ${SD_COURSE} and e.status = 'active'
+       )
+       and not exists (
+         select 1 from course.payments pay where pay.email = p.email and pay.track = ${SD_COURSE}
        )
      order by p.created_at
      limit ${BATCH}

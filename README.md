@@ -275,6 +275,7 @@ it twice.
 | `registration.followup.{1,2,3}` | Registered, not paid: 1 hour, 1 day, 3 days | `/api/cron/followups` (hourly) |
 | `payment.receipt`, `sd.receipt` | A payment verifies; the SD one is the receipt and welcome | `src/lib/receipt.ts` |
 | `sd.referral_earned` | A referrer's third friend pays: their refund is earned | `src/lib/referrals.ts` |
+| `sd.followup.{1,2,3}` | Claimed System Design (filled the form, opened Razorpay) but didn't pay: 1 hour, 1 day, 3 days. Any seat ends it | `src/lib/sd-followups.ts`, from the hourly job |
 | `sd.invite` | Pre-registered before payments opened: it's open, your price is held. Off until `SD_INVITE_PREREGISTERED=true` | `src/lib/sd-invites.ts`, from the hourly job |
 | `sd.reminder.lesson`, `sd.reminder.assessment` | 20:00 IST, an enrolled learner passed no lesson check today | `/api/cron/sd-reminders`, `src/lib/sd-reminders.ts` |
 | `support.ticket` | A help request, to the team inbox | `/api/support/ticket` |
@@ -291,7 +292,7 @@ When the final assessment moves to the server, record its pass in
 assessment reminder stops once it is passed. Every reminder has a one-click
 unsubscribe (`/api/sd/unsubscribe`), which sets `enrollments.reminders_off_at`.
 
-`0022_sd_mail.sql` adds the columns these need; run `npm run db:migrate` first.
+`0022_sd_mail.sql` and `0023_sd_followups.sql` add the columns these need; run `npm run db:migrate` first.
 The reminder job is `.github/workflows/sd-reminders.yml`, with `CRON_SECRET` as a
 repository secret, and is safe to re-run by hand.
 
