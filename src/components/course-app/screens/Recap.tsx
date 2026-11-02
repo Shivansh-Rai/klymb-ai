@@ -1,7 +1,7 @@
 "use client";
 
 import { MODULES } from "@/data/system-design/course-app";
-import { dayOf, isPaywalled, moduleIds, moduleMinutes, openLesson, pad, startQuiz, type CourseState } from "@/lib/course-app";
+import { dayOf, isPaywalled, moduleIds, moduleMinutes, openFinal, openLesson, pad, type CourseState } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { BackButton, Stats, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
@@ -35,7 +35,7 @@ export function Recap({ s, act }: { s: CourseState; act: Act }) {
   const next = MODULES[rm + 1];
   const badge = MODULE_BADGE[rm];
   const notes = moduleIds(rm).reduce((n, id) => n + (s.notes[id]?.length ?? 0), 0);
-  const goNext = () => act((p) => (next ? openLesson(p, `${rm + 1}-0`) : startQuiz(p, "post")));
+  const goNext = () => act((p) => (next ? openLesson(p, `${rm + 1}-0`) : openFinal(p)));
   const review = () => act((p) => ({ ...p, screen: "player", cur: moduleIds(rm)[moduleIds(rm).length - 1], ptab: "notes", t: 0, playing: false }));
   const n = moduleIds(rm).length;
 

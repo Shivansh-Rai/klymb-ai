@@ -14,13 +14,15 @@ export const metadata: Metadata = {
 /** The course on sale. It stands alone while HIDE_MONEY keeps the 30-day tracks' fees off the site. */
 function SystemDesignRefund({ n }: { n: string }) {
   return (
-    <Section n={n} title="System Design" plain="Finish all 21 lessons, pass every check, take the final assessment: your fee comes back in full.">
+    <Section n={n} title="System Design" plain="One lesson a day for 21 days, no missed days, 70% or higher on the final assessment: your fee comes back in full. Miss a day and you can keep learning, but the refund is gone.">
       <p>{sdRefund.headline}</p>
       <p>{sdRefund.earlyAccess}</p>
       <p>All of the following must be true:</p>
       <ul>
         {sdRefund.conditions.map((c) => <li key={c}>{c}</li>)}
       </ul>
+      <p>{sdRefund.waiting}</p>
+      <p>{sdRefund.missed}</p>
       <p>{sdRefund.window}</p>
       <p>{sdRefund.payout}</p>
       <p>{sdRefund.partial}</p>

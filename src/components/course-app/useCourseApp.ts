@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QUESTIONS } from "@/data/system-design/course-app";
 import {
-  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored,
+  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, finalFailed, finishFinal, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored, withProgress,
   type CourseState, type LessonContent, type StartScreen,
 } from "@/lib/course-app";
+import type { SdProgress } from "@/lib/sd-pace";
 import { useActivity } from "./track";
 
 /**
@@ -29,7 +30,19 @@ export type Act = (fn: (s: CourseState) => CourseState) => void;
  * `?paid=1` is the return from checkout. Someone new with no seat and no link
  * to a lesson goes to the offer rather than an empty course.
  */
-export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, LessonContent>; enrolled: boolean }) {
+/** Sends a final assessment attempt to be graded. */
+async function gradeFinal(answers: CourseState["quiz"]["answers"], attempt: number) {
+  const res = await fetch("/api/sd/final", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ attempt, answers: QUESTIONS.map((_, i) => answers[i] ?? null) }),
+  }).catch(() => null);
+  const out = await res?.json().catch(() => null);
+  if (res?.ok && Array.isArray(out?.results)) return out as { results: number[]; progress: SdProgress | null };
+  return { error: typeof out?.error === "string" ? out.error : "We couldn’t reach the server. Your answers are safe, so try again." };
+}
+
+export function useCourseApp({ lessons, enrolled, progress }: { lessons: Record<string, LessonContent>; enrolled: boolean; progress: SdProgress | null }) {
   const [s, setS] = useState<CourseState>(() => defaultState());
   const [ready, setReady] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -53,7 +66,7 @@ export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, Le
       next = previewState(start as StartScreen, { q: Number(params.get("q") ?? 0), seedPost: params.get("post") === "1" });
     } else {
       const raw = read(STORAGE_KEY);
-      next = fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY)));
+      next = withProgress(fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY))), progress);
       if (link.current === undefined) {
         link.current = params.get("lesson");
         paid.current = params.has("paid");
@@ -69,7 +82,7 @@ export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, Le
     setS(next);
     setPreviewing(preview.current);
     setReady(true);
-  }, [lessons, enrolled]);
+  }, [lessons, enrolled, progress]);
 
   useEffect(() => {
     if (!ready || preview.current) return;
@@ -116,6 +129,20 @@ export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, Le
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // The last answer is in: the server grades the attempt. A retry sends the same attempt number, so it can't cost a try.
+  const { screen, quiz: { stage, answers } } = s;
+  const tries = s.progress?.finals.length ?? 0;
+  useEffect(() => {
+    if (screen !== "quiz" || stage !== "sending") return;
+    if (preview.current) return setS((p) => finishFinal(p, QUESTIONS.map(() => 1), null));
+    let live = true;
+    void gradeFinal(answers, tries + 1).then((out) => {
+      if (!live) return;
+      setS((p) => ("error" in out ? finalFailed(p, out.error) : finishFinal(p, out.results, out.progress)));
+    });
+    return () => { live = false; };
+  }, [screen, stage, answers, tries]);
 
   useActivity(s, ready, previewing);
 

@@ -154,9 +154,38 @@ export interface ReferralView {
   ends: string;
   /** What comes back: "₹499". */
   amount: string;
+  /** Made-up data for `?start=refer`, so its link can't be sent to anyone. */
+  sample?: boolean;
 }
 
+/** Why someone has no offer to show. `retry` is a failed read, so a buyer is never told they have none because of an outage. */
+export type ReferralMiss = "signin" | "buy" | "granted" | "retry";
+
+/** What the Refer tab shows: their offer, or why there isn't one. */
+export type ReferralStanding = { view: ReferralView; why: null } | { view: null; why: ReferralMiss };
+
 export const referralLink = (site: string, code: string) => `${site}/system-design?ref=${code}`;
+
+/** A lesson post with their link on the end, in the lesson's language. */
+export function referralPost(post: string, link: string, lang: "en" | "hi") {
+  return `${post}\n\n${lang === "hi" ? "Mere saath seekhna hai? Yahan join karo" : "Want to learn this with me? Join here"}: ${link}`;
+}
+
+/** How long this browser keeps a code it was sent, so a friend who comes back later without the link still counts. */
+export const REFERRAL_KEPT_DAYS = 14;
+
+/** A code as this browser stores it. */
+export const keepRef = (code: string, now = Date.now()) => JSON.stringify({ code, until: now + REFERRAL_KEPT_DAYS * 864e5 });
+
+/** The code this browser is keeping, or null when there's none, it ran out, or it isn't one of ours. */
+export function keptRef(stored: string | null, now = Date.now()) {
+  try {
+    const { code, until } = JSON.parse(stored ?? "null") as { code: unknown; until: unknown };
+    return typeof until === "number" && now < until ? refOf(code) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Back to the offer from Google, `claim` picking up the claim they started, with the campaign and referral they came in on. */
 export function offerPath(campaign: string | null, claim = false, ref: string | null = null) {

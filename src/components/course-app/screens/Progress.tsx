@@ -122,7 +122,7 @@ export function Progress({ s }: { s: CourseState }) {
             <Icon name="flame" size={40} />
           </div>
           <div className="mt-2 text-[22px] font-extrabold">day streak</div>
-          <div className="text-[13px]">{st.current ? `Longest: ${st.longest} days` : "One lesson step starts it."}</div>
+          <div className="text-[13px]">{st.current ? `Longest: ${st.longest} days` : "Pass a lesson to start it."}</div>
         </div>
         <div className="rounded-2xl border border-[rgba(32,30,29,.07)] bg-[#fffdf9] px-[18px] py-4 shadow-[0_1px_2px_rgba(32,30,29,.05),0_10px_24px_-16px_rgba(32,30,29,.25)]">
           <div className="mb-2.5 flex items-baseline justify-between">

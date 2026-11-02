@@ -6,7 +6,7 @@ import { db, type Db } from "@/lib/db/client";
 import { formatINR } from "@/lib/format";
 import { sdReferralEarnedEmail, sendMail } from "@/lib/mail";
 import {
-  REFERRAL_ALPHABET, REFERRAL_CODE_LENGTH, SD_COURSE, SD_REFERRAL, referralDeadline, referralLeft, referralLink, referralState, type ReferralView,
+  REFERRAL_ALPHABET, REFERRAL_CODE_LENGTH, SD_COURSE, SD_REFERRAL, referralDeadline, referralLeft, referralLink, referralState, type ReferralStanding,
 } from "@/lib/sd-offer";
 
 /** Postgres: a unique constraint refused the row. */
@@ -59,30 +59,40 @@ async function friendCount(sql: Db, email: string, deadline: number) {
 const shortDate = (ms: number) =>
   new Date(ms).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 
-/** Someone's referral offer, or null if they have no paid seat. Never throws: the course opens without it. */
-export async function referralFor(email: string): Promise<ReferralView | null> {
+/** Someone with a seat: their offer, or why they have none. Never throws: the course opens without it. */
+export async function referralStanding(email: string): Promise<ReferralStanding> {
   const sql = db();
-  if (!sql) return null;
+  if (!sql) return { view: null, why: "retry" };
   const { data: seat, error } = await paidSeat(sql, email);
-  if (error) console.error("referral read failed:", error.code, error.message);
-  if (!seat) return null;
+  if (error) {
+    console.error("referral read failed:", error.code, error.message);
+    return { view: null, why: "retry" };
+  }
+  if (!seat) return { view: null, why: "granted" };
 
   const code = seat.referral_code ?? (await codeFor(sql, email));
-  if (!code) return null;
+  if (!code) return { view: null, why: "retry" };
 
   const deadline = referralDeadline(seat.created_at);
-  const { count } = await friendCount(sql, email, deadline);
+  const { count, error: countError } = await friendCount(sql, email, deadline);
+  if (countError) return { view: null, why: "retry" };
   const now = Date.now();
   return {
-    code,
-    link: referralLink(site.url, code),
-    count,
-    state: referralState({ count, deadline, refunded: seat.payment_status === "refunded" }, now),
-    left: referralLeft(deadline - now),
-    ends: shortDate(deadline),
-    amount: formatINR(seat.amount / 100),
+    why: null,
+    view: {
+      code,
+      link: referralLink(site.url, code),
+      count,
+      state: referralState({ count, deadline, refunded: seat.payment_status === "refunded" }, now),
+      left: referralLeft(deadline - now),
+      ends: shortDate(deadline),
+      amount: formatINR(seat.amount / 100),
+    },
   };
 }
+
+/** Someone's referral offer, or null if they have no paid seat. */
+export const referralFor = async (email: string) => (await referralStanding(email)).view;
 
 /** The person behind a code, for checking an order. Null when the code isn't a live one. */
 export async function referrerOf(sql: Db, code: string) {

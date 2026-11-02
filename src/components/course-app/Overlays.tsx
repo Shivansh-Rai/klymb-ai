@@ -193,7 +193,7 @@ export function PaywallSheet({ s, act }: { s: CourseState; act: Act }) {
       <div role="dialog" aria-modal="true" aria-labelledby="sd-pay-t" className="sd-a-in sd-lg-shadow flex flex-col gap-3 rounded-t-2xl border-t-[3px] border-sd-accent bg-sd-bg px-5 pt-[18px] pb-[34px] lg:w-[min(480px,90%)] lg:rounded-2xl lg:p-6" style={{ animationDuration: ".35s" }}>
         <span className="sd-kicker text-sd-accent-700">{lessonDay(s.cur)}</span>
         <h3 id="sd-pay-t" className="m-0 text-2xl leading-[1.15] tracking-[-0.02em] text-balance">This lesson is in the full course.</h3>
-        <p className="m-0 text-[15px] leading-[1.45] text-pretty text-sd-n-800">The course intro is free. The full course opens every lesson, and you get 100% of your money back when you finish it.</p>
+        <p className="m-0 text-[15px] leading-[1.45] text-pretty text-sd-n-800">The course intro is free. The full course opens every lesson, and you get 100% of your money back when you finish on schedule: one lesson a day, no missed days, 70% or higher on the final assessment.</p>
         <Link ref={offer} href="/system-design" className="sd-btn sd-btn-primary mt-1 h-[52px] justify-between text-base">See the offer<Icon name="arrowR" /></Link>
         <button type="button" onClick={close} className="sd-btn sd-btn-ghost self-start">Not now</button>
       </div>
@@ -227,9 +227,9 @@ export function Toast({ text }: { text: string }) {
   );
 }
 
-const PLEDGES = (goal: number): { icon: "shield" | "flame"; title: string; body: string }[] => [
+const PLEDGES: { icon: "shield" | "flame"; title: string; body: string }[] = [
   { icon: "shield", title: "I’ll learn honestly", body: "No looking up answers. An honest score shows what to rewatch." },
-  { icon: "flame", title: "I’ll practise every day", body: `One lesson a day. ${goal} minutes is enough.` },
+  { icon: "flame", title: "I’ll do one lesson every day", body: "If I miss a day, I can keep learning, but my streak resets and I lose the refund." },
 ];
 const HOLD_MS = 1200;
 
@@ -261,7 +261,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
             <span className="sd-kicker text-sd-accent-700">Before you start</span>
             <h1 className="m-0 mb-1 text-[34px] leading-[.98] tracking-[-0.04em] text-balance lg:text-[52px]">Make two promises.</h1>
             <div className="flex flex-col gap-2.5" role="group" aria-label="Promises">
-              {PLEDGES(s.goal).map((pl, i) => {
+              {PLEDGES.map((pl, i) => {
                 const on = pledge[i];
                 return (
                   <button

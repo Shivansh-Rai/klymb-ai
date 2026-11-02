@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { Day, DayCopy, Lang } from "@/data/system-design/types";
 import { useLinkedInPost } from "@/components/share/LinkedInPost";
 import { fetchImage, pasteKey, useShareImage, type LinkedInShare } from "@/lib/linkedin-share";
+import { referralPost } from "@/lib/sd-offer";
 import { Icon } from "../icons";
+import { useReferral } from "../Referral";
 import { track } from "../track";
 
 const UI = {
@@ -26,18 +28,21 @@ const UI = {
  * The learn-in-public card: why to share, the image, and the post. At lesson
  * end it comes first and stands out; on a revisit it also shows the ready-written
  * post so it can be read, copied and edited. `onShared` fires once they've posted.
+ * While a buyer's referral offer is open, the post ends with their link.
  */
 export function ShareCard({ lang, id, day, c, shared, onShared, showText = false }: {
   lang: Lang; id: string; day: Day; c: DayCopy; shared: boolean; onShared: () => void; showText?: boolean;
 }) {
   const ui = UI[lang];
+  const referral = useReferral();
+  const post = referral?.state === "open" && !referral.sample ? referralPost(c.linkedin, referral.link, lang) : c.linkedin;
   const [posted, setPosted] = useState("");
   const [copied, setCopied] = useState(false);
   const image = `/images/system-design/day-${day.day}-linkedin-${lang}.png`;
   const file = `klymb-system-design-day-${day.day}.png`;
   const shareImage = useShareImage(image, file, () => fetchImage(image));
   const linkedIn = useLinkedInPost({
-    text: c.linkedin, image: shareImage, alt: c.cheatsheet.title, lang, returnTo: `/learn/system-design?lesson=${id}`,
+    text: post, image: shareImage, alt: c.cheatsheet.title, lang, returnTo: `/learn/system-design?lesson=${id}`,
     onShared: (how: LinkedInShare) => {
       setPosted(how === "cancelled" ? "" : how === "pasted" ? ui.posted.pasted(pasteKey()) : ui.posted[how]);
       if (how !== "cancelled") onShared();
@@ -49,7 +54,7 @@ export function ShareCard({ lang, id, day, c, shared, onShared, showText = false
   };
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(c.linkedin);
+      await navigator.clipboard.writeText(post);
       track("share", id, "done", { kind: "copy" });
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
@@ -70,7 +75,7 @@ export function ShareCard({ lang, id, day, c, shared, onShared, showText = false
       {showText && (
         <div className="flex flex-col gap-2">
           <h6 className="sd-h6 m-0">{ui.template}</h6>
-          <p className="m-0 max-h-[220px] overflow-y-auto rounded-lg border border-sd-divider bg-sd-bg p-3 text-sm leading-[1.5] whitespace-pre-line">{c.linkedin}</p>
+          <p className="m-0 max-h-[220px] overflow-y-auto rounded-lg border border-sd-divider bg-sd-bg p-3 text-sm leading-[1.5] whitespace-pre-line">{post}</p>
           <button type="button" onClick={copy} className="sd-btn sd-btn-secondary h-10 w-fit gap-2"><Icon name={copied ? "check" : "copy"} size={16} />{copied ? ui.copied : ui.copy}</button>
         </div>
       )}

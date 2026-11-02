@@ -117,3 +117,11 @@ test("every table storing a track allows all six", () => {
     assert.match(match[1], /'ai-product-manager'/);
   }
 });
+
+test("every final attempt is kept, keyed so a double submit records one", () => {
+  const final = code(readFileSync(`${dir}/0024_final_attempts.sql`, "utf8"));
+  assert.match(final, /create table if not exists course\.final_attempts/);
+  assert.match(final, /primary key \(email, course, attempt\)/);
+  assert.match(final, /final_attempts_email_lowercase check \(email = lower\(email\)\)/);
+  assert.match(final, /primary key \(email, lesson\)/);
+});
