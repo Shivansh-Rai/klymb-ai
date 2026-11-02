@@ -346,7 +346,14 @@ export function sdReminderEmail(p: {
 }) {
   const site = esc(p.siteUrl);
   const lesson = p.target.kind === "lesson" ? p.target : null;
-  const subject = lesson ? `Reminder: today's System Design lesson is "${lesson.title}"` : "Reminder: your System Design final assessment is waiting";
+  // One emoji and plain words: caps, emoji runs and "URGENT" are what send a mail to Promotions or spam.
+  // The name only when we know it: "waiting for you, there" reads like a mail merge gone wrong.
+  const you = p.name && p.name !== "there" ? `, ${p.name}` : "";
+  const subject = !lesson
+    ? `⏰ Reminder: one step left${you}. Your System Design final assessment is waiting`
+    : p.behind > 1
+      ? `⏰ Reminder: ${p.behind} System Design lessons are waiting for you${you}`
+      : `⏰ Reminder: "${lesson.title}" is waiting for you${you}`;
   const intro = lesson
     ? p.behind > 1
       ? `You have ${p.behind} lessons waiting. Start with this one: about ${lesson.minutes} minutes, and its check counts toward your 100% refund.`
