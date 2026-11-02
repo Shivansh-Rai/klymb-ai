@@ -3,6 +3,9 @@ import { db, type Db } from "@/lib/db/client";
 import { SD_COURSE } from "@/lib/sd-offer";
 import type { SdProgress } from "@/lib/sd-pace";
 
+/** Postgres: no such table. */
+const UNDEFINED_TABLE = "42P01";
+
 /**
  * What the server holds on one learner, read fresh: the lessons they passed
  * and when, their final attempts, and whether a fee is there to give back.
@@ -27,7 +30,9 @@ export async function sdProgress(email: string, sql: Db | null = db()): Promise<
        where e.email = ${email} and e.course = ${SD_COURSE} and e.status = 'active'
     `,
   ]);
-  const failed = passes.error ?? finals.error ?? seat.error;
+  // Code can go live before its migration. Only the final needs this table, so lesson checks mustn't stop without it.
+  const noFinals = finals.error?.code === UNDEFINED_TABLE;
+  const failed = passes.error ?? (noFinals ? null : finals.error) ?? seat.error;
   if (failed) {
     console.error("progress read failed:", failed.code, failed.message);
     return null;

@@ -162,7 +162,7 @@ function Results({ questions, lang, picks, hasNext, children }: { questions: Que
   );
 }
 
-/** Sends an attempt to be graded. The answers come back with it, or null when it couldn't be reached, or why it was refused. */
+/** Sends an attempt to be graded. The answers come back with it, or what the server said, or nothing when it couldn't be reached. */
 async function grade(lesson: string, picks: number[]) {
   const res = await fetch("/api/sd/check", {
     method: "POST",
@@ -171,7 +171,7 @@ async function grade(lesson: string, picks: number[]) {
   }).catch(() => null);
   const out = await res?.json().catch(() => null);
   if (res?.ok && out?.review) return { review: out.review as Record<Lang, Question[]>, progress: (out.progress ?? null) as SdProgress | null };
-  return { refused: res?.status === 403 && typeof out?.error === "string" ? (out.error as string) : null };
+  return { refused: typeof out?.error === "string" ? (out.error as string) : null };
 }
 
 /**

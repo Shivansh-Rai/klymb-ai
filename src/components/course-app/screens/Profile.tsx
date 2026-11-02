@@ -6,7 +6,7 @@ import { Icon } from "../icons";
 import { headline, useReferral } from "../Referral";
 import { Segmented, Stats, Toggle } from "../ui";
 import type { Act } from "../useCourseApp";
-import { GoogleButton, useCourseUser } from "../user";
+import { GoogleButton, LogOutButton, useCourseUser } from "../user";
 
 type BoolKey = "offline" | "vidErr";
 
@@ -44,7 +44,7 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
       <Row><Label label="Daily goal" sub="Passing one lesson a day keeps your streak." /><Segmented value={s.goal} options={[[5, "5 min"], [15, "15 min"], [30, "30 min"]]} onChange={(goal) => act((p) => ({ ...p, goal }))} /></Row>
     </>],
     ["This device", <>
-      <Row>{user ? <Label label="Signed in" sub={user.email} /> : <div className="flex w-full flex-col gap-2"><Label label="Not signed in" sub="Sign in to keep your progress." /><GoogleButton where="profile" lesson={s.cur} className="h-11 border-2 border-sd-ink sm:max-w-[320px]" /></div>}</Row>
+      <Row>{user ? <><Label label="Signed in" sub={user.email} /><LogOutButton /></> : <div className="flex w-full flex-col gap-2"><Label label="Not signed in" sub="Sign in to keep your progress." /><GoogleButton where="profile" lesson={s.cur} className="h-11 border-2 border-sd-ink sm:max-w-[320px]" /></div>}</Row>
       <Row><LinkRow label="Replay Kamran’s tour" sub="The lesson screen in 5 stops." onClick={() => act((p) => ({ ...openLesson(p, dayOf(p.cur) ? p.cur : "0-0"), toured: false }))} /></Row>
       <Row><LinkRow label="Start over" sub="Clears progress, notes and scores on this device." onClick={() => { if (window.confirm("Start the course over on this device? Your progress here will be cleared.")) act((p) => ({ ...defaultState(), screen: "onboard", onboarded: false, lang: p.lang })); }} /></Row>
     </>],
