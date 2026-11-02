@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useState } from "react";
 import { evalMetrics } from "@/data/ai-foundations";
+import { HIDE_MONEY } from "@/lib/site-status";
 import { ButtonLink } from "@/components/ui/Button";
 
 /*
@@ -100,7 +101,7 @@ export function EvalDemo() {
                   {gap <= 4 ? "You grade like a reviewer already." : gap <= 9 ? "Close. The course sharpens the rest." : "This is exactly what the course trains."}{" "}
                   <span className="font-normal text-muted">(total difference: {gap})</span>
                 </p>
-                <ButtonLink href="#pricing" arrow soft>Learn this in your track</ButtonLink>
+                <ButtonLink href={HIDE_MONEY ? "#register" : "#pricing"} arrow soft>Learn this in your track</ButtonLink>
                 <button type="button" onClick={() => { setScores({}); setRevealed(false); }} className="text-sm font-bold text-red-deep underline underline-offset-4">
                   Try again
                 </button>

@@ -4,7 +4,7 @@ import "./offer.css";
 const BULBS = ["#e7c97a", "#f0868b", "#fbf6ee", "#e7c97a"];
 
 /** A string of bulbs along the top of the page, sagging twice across it. */
-function Lights({ count, className }: { count: number; className: string }) {
+export function Lights({ count, className }: { count: number; className: string }) {
   return (
     <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-x-0 top-0 z-[1] h-[60px]", className)}>
       <svg width="100%" height="60" preserveAspectRatio="none" viewBox="0 0 100 60" className="absolute top-0 left-0">
@@ -29,7 +29,7 @@ function Lights({ count, className }: { count: number; className: string }) {
 /** The offer's night sky: warm glows and a string of Diwali lights. */
 export function OfferBackdrop({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-[#1a1716] [font-family:var(--font-archivo)] text-[#f6efe4] [container-type:inline-size]">
+    <div className="relative min-h-dvh overflow-x-clip bg-[#1a1716] [font-family:var(--font-archivo)] text-[#f6efe4] [container-type:inline-size]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"

@@ -12,7 +12,12 @@ export const SD_OFFER = {
   full: 1999,
   /** Exclusive end: midnight IST at the start of 9 November. */
   endsAt: "2026-11-09T00:00:00+05:30",
+  /** The last day of the offer, in words. */
+  endsLabel: "8 Nov",
 } as const;
+
+/** The course at a glance, on the offer page and the home page. */
+export const SD_STATS = [["21", "days"], ["15 min", "a day"], ["5", "days of AI design"]] as const;
 
 export const sdOfferEnd = () => new Date(SD_OFFER.endsAt).getTime();
 
