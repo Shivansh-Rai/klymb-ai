@@ -113,6 +113,7 @@ export function lessonView(s: CourseState, id: string) {
     locked,
     id,
     title: l.title,
+    about: l.about,
     done,
     cur,
     /** The lesson check's score, and whether that score is a miss waiting for a retake. */

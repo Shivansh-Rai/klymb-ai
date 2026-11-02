@@ -13,48 +13,48 @@ export interface CourseModule {
   title: string;
   /** Three labels animated on the player's thumbnail while the video plays. */
   flow: [string, string, string];
-  /** [title, duration "m:ss"] */
-  lessons: [string, string][];
+  /** [title, duration "m:ss", what the day covers]. The description shows on the course list even before the day is released. */
+  lessons: [string, string, string][];
 }
 
 export const MODULES: CourseModule[] = [
   {
-    title: "Foundations · a shopping app",
+    title: "Days 1–8 · Build your system design foundation",
     flow: ["Client", "Server", "Database"],
     lessons: [
-      ["What is system design? The last pair of shoes", "6:19"],
-      ["How an app works: from a tap to a saved cart", "6:49"],
-      ["Why applications slow down", "0:00"],
-      ["Load balancing", "0:00"],
-      ["Database foundations", "0:00"],
-      ["Caching and content delivery", "0:00"],
-      ["Replication and sharding", "0:00"],
-      ["Queues and background work", "0:00"],
+      ["What is system design?", "6:19", "Understand what system design means, why it matters, and how clients, servers and databases work together. Explore what can happen when two users try to buy the last available item."],
+      ["How does an application work?", "6:49", "Follow a request from the user's screen to the server and database. Learn about APIs, requests, responses, authentication and storing data."],
+      ["Why do applications slow down?", "6:32", "Understand latency, throughput, concurrency and bottlenecks. Explore how a sudden sale can increase traffic and affect an application."],
+      ["Load balancing and multiple servers", "5:52", "Learn how requests can be distributed across servers, why health checks matter and how an application can respond when a server becomes unavailable."],
+      ["Database foundations", "6:00", "Explore tables, keys, relationships, indexes and transactions. Learn how to think about storing and retrieving application data."],
+      ["Caching and content delivery", "6:08", "Learn how caching can reduce repeated work, what happens on a cache hit or miss, and why keeping cached data fresh matters. Get introduced to CDNs."],
+      ["Replication, sharding and consistency", "6:05", "Understand how database replicas and sharding can help with growing workloads, along with challenges like stale data and uneven traffic."],
+      ["Queues and background work", "0:00", "Learn how queues and workers handle tasks such as notifications. Explore retries, duplicate tasks and why some work can happen after the user receives a response."],
     ],
   },
   {
-    title: "Interview practice · worked designs",
+    title: "Days 9–16 · Apply your knowledge to interview problems",
     flow: ["Clarify", "Design", "Trade-offs"],
     lessons: [
-      ["The interview framework", "0:00"],
-      ["Reliability and overload", "0:00"],
-      ["Design a notification service", "0:00"],
-      ["Design a social news feed", "0:00"],
-      ["Design a ticket-booking system", "0:00"],
-      ["Design a chat application", "0:00"],
-      ["Design a video streaming system", "0:00"],
-      ["Revision: design a whole system from scratch", "0:00"],
+      ["Your system design interview framework", "0:00", "Learn a step-by-step approach to unfamiliar questions: clarify requirements, estimate scale, define data and APIs, draw the architecture, and discuss trade-offs. Apply it to a URL shortener."],
+      ["Reliability and handling overload", "5:09", "Explore timeouts, retries, circuit breakers, rate limiting and graceful degradation. Learn how systems can respond when traffic rises or a service becomes slow."],
+      ["Design a notification system", "0:00", "Design a system that sends email, SMS or push notifications. Consider user preferences, provider failures, retries and delivery status."],
+      ["Design a social media feed", "4:48", "Explore how posts reach followers and compare fan-out on write, fan-out on read and hybrid approaches."],
+      ["Design a ticket booking system", "0:00", "Learn how to prevent double booking with temporary seat holds and protected database updates. Explore payment delays and expired reservations."],
+      ["Design a chat system", "0:00", "Design a basic messaging system with persistent connections, message storage and offline delivery. Understand the difference between a message being saved, delivered and read."],
+      ["Design a video streaming system", "0:00", "Explore video uploads, storage, transcoding, CDNs and adaptive quality. Learn why a video may switch quality when the viewer's connection changes."],
+      ["Revision: design a whole system from scratch", "0:00", "Put the framework into practice with an unfamiliar design problem. Draw the whole system on a blank board, then compare it with a model design: requirements, architecture, bottlenecks, failures and trade-offs."],
     ],
   },
   {
-    title: "Introduction to AI system design",
+    title: "Days 17–21 · Get started with AI system design",
     flow: ["Question", "Retrieve", "Model"],
     lessons: [
-      ["Design a basic AI assistant", "0:00"],
-      ["RAG: answering from documents", "0:00"],
-      ["AI serving: tokens, latency and cost", "0:00"],
-      ["AI quality and safety", "0:00"],
-      ["Capstone: a document-based AI assistant", "0:00"],
+      ["Design a simple AI assistant", "0:00", "Understand how an application connects a user to an AI model. Get introduced to tokens, context, latency, cost and the possibility of inaccurate answers."],
+      ["Build the architecture for a RAG assistant", "0:00", "Learn how an assistant can retrieve information from documents before generating an answer. Explore chunking, embeddings, vector indexes, permissions and hybrid search."],
+      ["AI latency, cost and model choices", "0:00", "Learn how token usage affects cost and limits. Explore streaming responses, token rate limits, model routing and fallback models when a primary model is unavailable."],
+      ["AI safety, quality and data access", "0:00", "Explore how to evaluate AI answers, handle unsupported responses and think about prompt injection. Learn the basics of tenant isolation and document permissions."],
+      ["AI system design capstone", "0:00", "Bring the concepts together by designing a document-based AI assistant. Explain its retrieval flow, data access, model choices, failure handling and evaluation approach."],
     ],
   },
 ];

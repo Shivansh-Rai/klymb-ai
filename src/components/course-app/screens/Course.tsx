@@ -92,7 +92,10 @@ export function Course({ s, act }: { s: CourseState; act: Act }) {
                           )}
                         >
                           <LessonMark done={v.done} cur={v.cur} locked={v.locked} />
-                          <span className={clsx("lg:order-3 lg:col-span-2 lg:leading-[1.3]", v.cur && "font-extrabold", v.dim && "opacity-45")}>{v.title}</span>
+                          <span className="flex min-w-0 flex-col gap-0.5 lg:order-3 lg:col-span-2 lg:leading-[1.3]">
+                            <span className={clsx(v.cur && "font-extrabold", v.dim && "opacity-60")}>{v.title}</span>
+                            <span className="text-xs leading-[1.4] text-sd-n-700">{v.about}</span>
+                          </span>
                           <span className="lg:order-2 lg:justify-self-end"><Duration v={v} /></span>
                         </button>
                       );

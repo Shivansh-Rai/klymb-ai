@@ -281,7 +281,7 @@ export const localDate = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMont
 export function lesson(id: string) {
   const [mi, li] = id.split("-").map(Number);
   const m = MODULES[mi];
-  return { mi, li, m, title: m.lessons[li][0], dur: m.lessons[li][1], secs: sec(m.lessons[li][1]), code: `D${ALL_IDS.indexOf(id)}` };
+  return { mi, li, m, title: m.lessons[li][0], about: m.lessons[li][2], dur: m.lessons[li][1], secs: sec(m.lessons[li][1]), code: `D${ALL_IDS.indexOf(id)}` };
 }
 
 export const moduleIds = (mi: number) => MODULES[mi].lessons.map((_, li) => `${mi}-${li}`);
