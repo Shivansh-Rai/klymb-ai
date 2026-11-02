@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { LESSON_RELEASES } from "@/data/system-design/course-app";
 import { lesson } from "@/lib/course-app";
 import { isCronRequest } from "@/lib/cron-auth";
 import { db } from "@/lib/db/client";
-import { sdLessonOutEmail, sendMail } from "@/lib/mail";
+import { MAIL_SUPPORT, sdLessonOutEmail, sendMail } from "@/lib/mail";
 import { SD_COURSE } from "@/lib/sd-offer";
 import { addDays, istDay, paceOf } from "@/lib/sd-pace";
 import { sdProgress } from "@/lib/sd-progress";
@@ -46,9 +45,9 @@ export async function GET(req: Request) {
     if (!claimed) continue;
     const mail = sdLessonOutEmail({
       name: seat.name ?? "there", day: pace.day, title: lesson(pace.lesson).title, refundable: pace.refundable,
-      siteUrl: site.url, supportEmail: grievance.email,
+      siteUrl: site.url, supportEmail: MAIL_SUPPORT,
     });
-    const out = await sendMail({ to: { email: seat.email, name: seat.name ?? undefined }, ...mail });
+    const out = await sendMail({ to: { email: seat.email, name: seat.name ?? undefined }, ...mail, kind: "sd.lesson_out", idempotencyKey: `${seat.email}:${pace.lesson}` });
     if (out.ok) { sent++; continue; }
     // Not delivered: release the claim so the next run tries again.
     failed++;

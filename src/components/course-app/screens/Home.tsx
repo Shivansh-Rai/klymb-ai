@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
-import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openFinal, openLesson, paceNow, pct, streak, type CourseState } from "@/lib/course-app";
+import { ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openFinal, openLesson, paceNow, pct, streak, type CourseState } from "@/lib/course-app";
 import { paceMessage, type Pace } from "@/lib/sd-pace";
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
@@ -54,6 +54,10 @@ function kamranSays(s: CourseState, first: string | null) {
   const name = lessonDay(s.cur);
   const hi = first ? `Hi ${first}! ` : "Welcome back! ";
   if (isSoon(s.cur)) return `All released days done. ${name} is coming soon.`;
+  if (s.done.includes(s.cur)) {
+    const after = ALL_IDS.find((id) => !s.done.includes(id));
+    if (after) return isSoon(after) ? `All released days done. ${lessonDay(after)} is coming soon.` : `${hi}${lessonDay(after)} is next.`;
+  }
   const p = s.lessons[s.cur];
   const day = dayOf(s.cur);
   if (!day) return `${hi}${name} is in the full course.`;

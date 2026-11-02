@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QUESTIONS } from "@/data/system-design/course-app";
 import {
-  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, finalFailed, finishFinal, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored, withProgress,
+  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, finalFailed, finishFinal, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored, withProgress, withServerPasses,
   type CourseState, type LessonContent, type StartScreen,
 } from "@/lib/course-app";
 import type { SdProgress } from "@/lib/sd-pace";
@@ -22,8 +22,8 @@ const read = (k: string): unknown => { try { return JSON.parse(window.localStora
 export type Act = (fn: (s: CourseState) => CourseState) => void;
 
 /**
- * The app's one store. Progress is saved to this browser only (there is no
- * backend yet). `?start=<screen>` opens a design-review state instead and
+ * The app's one store. Progress is saved to this browser; only lesson passes
+ * are on the server, and `passes` brings those back on a new device. `?start=<screen>` opens a design-review state instead and
  * saves nothing; `&q=` and `&post=1` set the question and a finished
  * post-assessment, as on the design canvas. `?lesson=<id>` opens straight
  * into a lesson (for links from Instagram and the standalone Day pages).
@@ -42,7 +42,7 @@ async function gradeFinal(answers: CourseState["quiz"]["answers"], attempt: numb
   return { error: typeof out?.error === "string" ? out.error : "We couldn’t reach the server. Your answers are safe, so try again." };
 }
 
-export function useCourseApp({ lessons, enrolled, progress }: { lessons: Record<string, LessonContent>; enrolled: boolean; progress: SdProgress | null }) {
+export function useCourseApp({ lessons, enrolled, passes, progress }: { lessons: Record<string, LessonContent>; enrolled: boolean; passes: Record<string, number>; progress: SdProgress | null }) {
   const [s, setS] = useState<CourseState>(() => defaultState());
   const [ready, setReady] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -66,7 +66,7 @@ export function useCourseApp({ lessons, enrolled, progress }: { lessons: Record<
       next = previewState(start as StartScreen, { q: Number(params.get("q") ?? 0), seedPost: params.get("post") === "1" });
     } else {
       const raw = read(STORAGE_KEY);
-      next = withProgress(fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY))), progress);
+      next = withProgress(withServerPasses(fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY))), passes), progress);
       if (link.current === undefined) {
         link.current = params.get("lesson");
         paid.current = params.has("paid");
@@ -82,7 +82,7 @@ export function useCourseApp({ lessons, enrolled, progress }: { lessons: Record<
     setS(next);
     setPreviewing(preview.current);
     setReady(true);
-  }, [lessons, enrolled, progress]);
+  }, [lessons, enrolled, passes, progress]);
 
   useEffect(() => {
     if (!ready || preview.current) return;

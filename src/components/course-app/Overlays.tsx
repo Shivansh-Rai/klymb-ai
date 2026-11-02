@@ -250,7 +250,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
   };
   const up = () => { window.clearTimeout(timer.current); setHolding(false); };
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const start = () => act((p) => openLesson({ ...p, onboarded: true }, "0-0"));
+  const start = () => act((p) => openLesson({ ...p, onboarded: true }, p.cur));
   const signed = s.commitment ? new Date(`${s.commitment.date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
 
   return (
@@ -316,7 +316,7 @@ export function Commitment({ s, act }: { s: CourseState; act: Act }) {
                 <span className="text-xs text-sd-n-700">Signed {signed}</span>
               </div>
             </div>
-            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start Day 1<Icon name="arrowR" /></button>
+            <button type="button" onClick={start} className="sd-a-in sd-btn sd-btn-primary sd-btn-block h-[52px] justify-between text-base" style={{ animationDelay: "500ms" }}>Start {lessonDay(s.cur)}<Icon name="arrowR" /></button>
           </>
         )}
       </div>

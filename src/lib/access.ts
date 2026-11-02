@@ -41,6 +41,17 @@ export async function hasCourseAccess(email: string, course: string) {
   return !!data?.length;
 }
 
+/** Lessons this email has passed, with the best score. Empty on any error: the course still opens, from what the browser holds. */
+export async function lessonPasses(email: string, course: string) {
+  const sql = db();
+  if (!sql) return {};
+  const { data } = await sql.rows<{ lesson: string; best_score: number }>`
+    select lesson, best_score from course.lesson_checks
+     where email = ${email} and course = ${course} and passed_at is not null
+  `;
+  return Object.fromEntries((data ?? []).map((r) => [r.lesson, r.best_score]));
+}
+
 export type { DayLock } from "@/lib/day-lock";
 
 /** The day lock for a learner, with their payment looked up only when it matters. */

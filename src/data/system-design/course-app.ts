@@ -19,42 +19,42 @@ export interface CourseModule {
 
 export const MODULES: CourseModule[] = [
   {
-    title: "Foundations · a shopping app",
+    title: "Days 1–8 · Foundations",
     flow: ["Client", "Server", "Database"],
     lessons: [
-      ["What is system design? The last pair of shoes", "6:19"],
-      ["How an app works: from a tap to a saved cart", "6:49"],
-      ["Why applications slow down", "0:00"],
-      ["Load balancing", "0:00"],
-      ["Database foundations", "0:00"],
-      ["Caching and content delivery", "0:00"],
-      ["Replication and sharding", "0:00"],
+      ["What is system design?", "6:19"],
+      ["How does an application work?", "6:49"],
+      ["Why do applications slow down?", "6:32"],
+      ["Load balancing and multiple servers", "5:52"],
+      ["Database foundations", "6:00"],
+      ["Caching and content delivery", "6:08"],
+      ["Replication, sharding and consistency", "6:05"],
       ["Queues and background work", "0:00"],
     ],
   },
   {
-    title: "Interview practice · worked designs",
+    title: "Days 9–16 · Interview problems",
     flow: ["Clarify", "Design", "Trade-offs"],
     lessons: [
-      ["The interview framework", "0:00"],
-      ["Reliability and overload", "0:00"],
-      ["Design a notification service", "0:00"],
-      ["Design a social news feed", "0:00"],
-      ["Design a ticket-booking system", "0:00"],
-      ["Design a chat application", "0:00"],
+      ["Your system design interview framework", "0:00"],
+      ["Reliability and handling overload", "5:09"],
+      ["Design a notification system", "0:00"],
+      ["Design a social media feed", "4:48"],
+      ["Design a ticket booking system", "0:00"],
+      ["Design a chat system", "0:00"],
       ["Design a video streaming system", "0:00"],
       ["Revision: design a whole system from scratch", "0:00"],
     ],
   },
   {
-    title: "Introduction to AI system design",
+    title: "Days 17–21 · AI system design",
     flow: ["Question", "Retrieve", "Model"],
     lessons: [
-      ["Design a basic AI assistant", "0:00"],
-      ["RAG: answering from documents", "0:00"],
-      ["AI serving: tokens, latency and cost", "0:00"],
-      ["AI quality and safety", "0:00"],
-      ["Capstone: a document-based AI assistant", "0:00"],
+      ["Design a simple AI assistant", "0:00"],
+      ["Build the architecture for a RAG assistant", "0:00"],
+      ["AI latency, cost and model choices", "0:00"],
+      ["AI safety, quality and data access", "0:00"],
+      ["AI system design capstone", "0:00"],
     ],
   },
 ];
@@ -68,6 +68,13 @@ export const MODULES: CourseModule[] = [
 export const LESSON_RELEASES: Record<string, string> = {
   "0-0": "2026-10-31",
   "0-1": "2026-10-31",
+  "0-2": "2026-11-02",
+  "0-3": "2026-11-02",
+  "0-4": "2026-11-02",
+  "0-5": "2026-11-02",
+  "0-6": "2026-11-02",
+  "1-1": "2026-11-02",
+  "1-3": "2026-11-02",
 };
 export const BUILT_LESSONS = Object.keys(LESSON_RELEASES);
 /** Open to everyone. None: the course overview video is the free part, and every lesson needs a seat. */
@@ -129,14 +136,8 @@ export interface Notif {
   go: NotifTarget;
 }
 
-/** The inbox's messages. Until there is a backend to send them, these are the examples the design ships with. */
-export const NOTIFICATIONS: Notif[] = [
-  { id: 1, type: "reply", title: "Klymb team replied", body: "“If I have auto-scaling, why pre-scale at all?”", time: "12 min ago", group: "Today", unread: true, go: "player" },
-  { id: 2, type: "streak", title: "Your 6-day streak is waiting", body: "Pass today’s lesson to keep it.", time: "2 h ago", group: "Today", unread: true, go: "progress" },
-  { id: 3, type: "badge", title: "Badge earned: First pass", body: "First lesson check passed.", time: "Yesterday", group: "Earlier", unread: false, go: "progress" },
-  { id: 4, type: "module", title: "Day 3 is out", body: "Why applications slow down · 15 min", time: "2 days ago", group: "Earlier", unread: false, go: "course" },
-  { id: 5, type: "assess", title: "Your retake is open", body: "Day 1 rewatched. Try again.", time: "4 days ago", group: "Earlier", unread: false, go: "player" },
-];
+/** The inbox's messages. Empty until there is a backend to send real ones: a learner must never read a made-up reply. */
+export const NOTIFICATIONS: Notif[] = [];
 
 /** The welcome screen: what the course gives you, before Day 1. [title, detail] */
 export const WELCOME: [string, string][] = [

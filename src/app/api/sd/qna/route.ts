@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth, verifiedEmailFrom } from "@/auth";
 import { BUILT_LESSONS } from "@/data/system-design/course-app";
+import { hasCourseAccess } from "@/lib/access";
 import { getAdmin } from "@/lib/admin/auth";
 import { db } from "@/lib/db/client";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { QNA_PAGE, cleanBody, displayName, isUuid, toFeed, type QnaFeed, type QnaRow } from "@/lib/sd-qna";
+import { SD_COURSE } from "@/lib/sd-offer";
 
 const lessonOf = (v: unknown) => (typeof v === "string" && BUILT_LESSONS.includes(v) ? v : null);
 
@@ -12,8 +14,8 @@ const lessonOf = (v: unknown) => (typeof v === "string" && BUILT_LESSONS.include
  * A lesson's Q&A: questions from learners, replies from learners and the
  * Klymb team.
  *
- * Anyone can read; posting needs a verified Google sign-in, so every post has
- * a person behind it. Who is staff is read from admin_users on each request,
+ * Anyone can read; posting needs a verified Google sign-in and a seat, so every
+ * post has a learner behind it. Who is staff is read from admin_users on each request,
  * never from the body. Emails stay on the server: the feed says only whether
  * a post is the viewer's own.
  */
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
 
   const admin = await getAdmin();
   if (!admin) {
+    if (!(await hasCourseAccess(email, SD_COURSE))) return NextResponse.json({ error: "Q&A is for people on the course." }, { status: 403 });
     // A chat, not a firehose: generous for a learner, and a stop for a loop.
     const limit = await checkRateLimit("sd-qna", { limit: 20, windowMinutes: 60, identity: email });
     if (!limit.allowed) return NextResponse.json({ error: "That's a lot of posts. Take a break and come back in a bit." }, { status: 429 });

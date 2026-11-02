@@ -1,10 +1,9 @@
 import "server-only";
 import { randomInt } from "node:crypto";
 import { site } from "@/data/config";
-import { grievance } from "@/data/legal";
 import { db, type Db } from "@/lib/db/client";
 import { formatINR } from "@/lib/format";
-import { sdReferralEarnedEmail, sendMail } from "@/lib/mail";
+import { MAIL_SUPPORT, sdReferralEarnedEmail, sendMail } from "@/lib/mail";
 import {
   REFERRAL_ALPHABET, REFERRAL_CODE_LENGTH, SD_COURSE, SD_REFERRAL, referralDeadline, referralLeft, referralLink, referralState, type ReferralStanding,
 } from "@/lib/sd-offer";
@@ -141,9 +140,10 @@ export async function creditReferrer(sql: Db, orderId: string) {
     name: seat.name?.split(" ")[0] || "there",
     amount: formatINR(seat.amount / 100),
     siteUrl: site.url,
-    supportEmail: grievance.email,
+    supportEmail: MAIL_SUPPORT,
   });
-  const sent = await sendMail({ to: { email, name: seat.name ?? undefined }, ...mail });
+  // Earned once per seat, so the address is a stable key: ABT-Mailer never sends it twice.
+  const sent = await sendMail({ to: { email, name: seat.name ?? undefined }, ...mail, kind: "sd.referral_earned", idempotencyKey: email });
   if (!sent.ok) console.error("referral earned email failed:", email, sent.reason);
   return { error: null };
 }

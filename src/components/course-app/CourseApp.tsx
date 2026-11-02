@@ -60,6 +60,7 @@ function MiniPlayer({ s, act, className }: { s: CourseState; act: Act; className
 }
 
 const INBOX = true;
+const NO_PASSES: Record<string, number> = {};
 
 function Sidebar({ s, act }: { s: CourseState; act: Act }) {
   const unread = s.notifs.filter((n) => n.unread).length;
@@ -127,8 +128,8 @@ function TabBar({ s, act }: { s: CourseState; act: Act }) {
  * `lessons` is what this viewer may open, read on the server: paid lessons
  * reach the browser only this way.
  */
-export function CourseApp({ user = null, lessons, enrolled, referral, progress = null }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean; referral: ReferralStanding; progress?: SdProgress | null }) {
-  const { s, act, ready } = useCourseApp({ lessons, enrolled, progress });
+export function CourseApp({ user = null, lessons, enrolled, referral, passes = NO_PASSES, progress = null }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean; referral: ReferralStanding; passes?: Record<string, number>; progress?: SdProgress | null }) {
+  const { s, act, ready } = useCourseApp({ lessons, enrolled, passes, progress });
   const scroller = useRef<HTMLDivElement>(null);
 
   // The app is one screen tall and scrolls inside. If the page behind it could scroll too, phone browsers would
@@ -145,7 +146,7 @@ export function CourseApp({ user = null, lessons, enrolled, referral, progress =
     if (!el) return;
     el.scrollTop = 0;
     el.style.setProperty("--sy", "0");
-  }, [s.screen, s.quiz.stage]);
+  }, [s.screen, s.quiz.stage, s.stage, s.checkStage]);
 
   if (!ready) return <div className="sd-app h-dvh" />;
 

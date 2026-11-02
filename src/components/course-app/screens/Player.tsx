@@ -12,8 +12,10 @@ import { Community } from "../lesson/Community";
 import { LessonStage } from "../lesson/Practice";
 import { Revisit } from "../lesson/Revisit";
 import { Tour } from "../lesson/Tour";
+import { VideoWatermark } from "../lesson/VideoWatermark";
 import { track } from "../track";
 import { BackButton, Duration, LessonMark, lessonView } from "../ui";
+import { useCourseUser } from "../user";
 import type { Act } from "../useCourseApp";
 import { SUB_SIZE_CLASS, VideoBar, canSubtitle, useMenu, usePlayerKeys } from "./PlayerControls";
 
@@ -32,6 +34,7 @@ function Video({ s, act, subs, bar }: { s: CourseState; act: Act; subs?: boolean
   // Where playback was at the last time update, to count only real playback after a miss.
   const last = useRef<{ id: string; t: number }>({ id: "", t: 0 });
   const errOffline = s.offline && !s.vidErr;
+  const email = useCourseUser()?.email;
 
   useEffect(() => {
     const v = ref.current;
@@ -109,6 +112,7 @@ function Video({ s, act, subs, bar }: { s: CourseState; act: Act; subs?: boolean
         onError={() => act((p) => ({ ...p, vidErr: true, playing: false }))}
         className={clsx("block cursor-pointer bg-black", wide ? "aspect-video w-full" : "aspect-[9/16] h-[min(68dvh,560px)] max-w-full lg:h-[640px]")}
       />
+      {email && !s.vidErr && !errOffline && <VideoWatermark text={email} />}
       {subs && <Subtitles s={s} />}
       {!s.playing && !s.vidErr && !errOffline && (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center bg-black/18">
@@ -162,7 +166,14 @@ function Notes({ s, act }: { s: CourseState; act: Act }) {
 /** Every lesson of the course, by module, with the current one scrolled into view. */
 function CourseLessons({ s, act }: { s: CourseState; act: Act }) {
   const here = useRef<HTMLButtonElement>(null);
-  useEffect(() => { here.current?.scrollIntoView({ block: "nearest" }); }, []);
+  // Inside the panel only: scrollIntoView would also move the page behind it, away from the step on screen.
+  useEffect(() => {
+    const row = here.current;
+    const panel = row?.closest<HTMLElement>("[data-lesson-panel]");
+    if (!row || !panel) return;
+    const top = row.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+    if (top < 0 || top + row.offsetHeight > panel.clientHeight) panel.scrollTop += top;
+  }, []);
   return (
     <div className="flex flex-col px-5 py-3.5 lg:px-3.5 lg:pt-2">
       {MODULES.map((m, mi) => (
@@ -270,7 +281,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
             ))}
           </div>
           {/* One height for every tab, so switching never changes the page's length and the tabs stay where they are. */}
-          <div className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
+          <div data-lesson-panel className="h-[440px] overflow-y-auto overscroll-contain lg:h-[560px]">
             {s.ptab === "lessons" && <CourseLessons s={s} act={act} />}
             {s.ptab === "qna" && day && <Community key={s.cur} lesson={s.cur} day={day} lang={s.lang} />}
             {s.ptab === "notes" && <Notes s={s} act={act} />}

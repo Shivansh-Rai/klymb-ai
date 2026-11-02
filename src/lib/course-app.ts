@@ -560,7 +560,7 @@ export function finalFailed(s: CourseState, message: string, now = Date.now()): 
 /** The final assessment: shut until the day after the last lesson, then the results of the latest try, or the questions. */
 export function openFinal(s: CourseState, now = Date.now()): CourseState {
   const tries = s.progress?.finals.length ?? 0;
-  if (!tries && !paceNow(s, now)?.finalOpen) return { ...s, ...toast("The final assessment opens the day after you pass Day 21.", now, 2800) };
+  if (!tries && !paceNow(s, now)?.finalOpen) return { ...s, ...toast(`The final assessment opens the day after you pass Day ${LESSON_COUNT}.`, now, 2800) };
   return s.post && tries ? { ...s, screen: "results", lastKind: "post" } : startQuiz(s, "post");
 }
 
@@ -643,7 +643,7 @@ export function badges(s: CourseState, now = Date.now()): Badge[] {
 
 /** Fields kept in storage between visits. Preview switches and transient UI stay out. */
 const PERSISTED = [
-  "onboarded", "referralSeen", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone", "notifs",
+  "onboarded", "referralSeen", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone",
   "goal", "remind", "autoplay", "quality", "wifiOnly", "streakRem", "replyNotif", "todaySec", "today",
   "lessons", "lang", "subs", "subLang", "subSize", "audio", "volume", "muted", "toured", "activeDays", "commitment", "popDay",
 ] as const satisfies readonly (keyof CourseState)[];
@@ -712,6 +712,22 @@ export function startEnrolled(s: CourseState): CourseState {
 /** Back from a successful payment. */
 export function afterPayment(s: CourseState, now = Date.now()): CourseState {
   return { ...startEnrolled(s), ...toast("Payment received. Your seat is confirmed.", now, 4000) };
+}
+
+/**
+ * Lesson passes the server has on record, by lesson id with the best score.
+ * Everything else lives in one browser, so these are what a new device or a
+ * cleared browser picks up from: passed lessons done, and the next one open.
+ * `post` stays empty: the picks weren't kept, only that they passed.
+ */
+export function withServerPasses(s: CourseState, passes: Record<string, number>): CourseState {
+  const ids = Object.keys(passes).filter((id) => dayOf(id) && !s.lessons[id]?.post);
+  if (!ids.length) return s;
+  const lessons = { ...s.lessons };
+  for (const id of ids) lessons[id] = { ...lessons[id], watched: true, read: true, post: [], check: Math.max(lessons[id]?.check ?? 0, passes[id]), failed: false };
+  const done = [...s.done, ...ids.filter((id) => !s.done.includes(id))];
+  const next = ALL_IDS.find((id) => !done.includes(id) && !isSoon(id));
+  return { ...s, lessons, done, cur: next && done.includes(s.cur) ? next : s.cur };
 }
 
 /** Clamped to the allowed range, in steps of 0.05 so the label never shows float noise. */

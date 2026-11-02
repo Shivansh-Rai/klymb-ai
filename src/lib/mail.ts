@@ -1,38 +1,96 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+import { SUPPORT_EMAIL } from "@/data/support-faq";
+import { abtMailerReady, routesViaAbtMailer, sendViaAbtMailer } from "@/lib/abt-mailer";
 import { SD_REFERRAL } from "@/lib/sd-offer";
 import { HIDE_MONEY } from "@/lib/site-status";
 
+const SENDER_NAME = "Klymb.ai";
+/** The address every mail says to write to: the support inbox, not the legal grievance contact on the policy pages. */
+export const MAIL_SUPPORT = SUPPORT_EMAIL;
 const SD_LIVE = `${BUILT_LESSONS.length} of the ${MODULES.reduce((n, m) => n + m.lessons.length, 0)} lessons are out today`;
 
-/**
- * Transactional email through Brevo's HTTP API.
- *
- * Needs BREVO_API_KEY and MAIL_FROM (an address on a domain verified in
- * Brevo). Without them nothing is sent and callers carry on: an email must
- * never be the reason a payment fails to record.
- */
-export async function sendMail({ to, subject, html, text, replyTo }: { to: { email: string; name?: string }; subject: string; html: string; text: string; replyTo?: string }) {
-  const apiKey = process.env.BREVO_API_KEY;
-  const from = process.env.MAIL_FROM;
-  if (!apiKey || !from) return { ok: false as const, reason: "not configured" };
+export type MailResult = { ok: true } | { ok: false; reason: string; skipped?: boolean };
 
+/** True when some mail can go out: a sender, and Brevo or ABT-Mailer to send it. */
+export function mailReady() {
+  return !!process.env.MAIL_FROM && (!!process.env.BREVO_API_KEY || abtMailerReady());
+}
+
+/**
+ * Transactional email. Kinds listed in EMAIL_VIA_ABT_KINDS go through
+ * ABT-Mailer (SES, see lib/abt-mailer); the rest through Brevo's HTTP API.
+ *
+ * Needs MAIL_FROM (an address on a domain verified with the provider that
+ * sends it), plus BREVO_API_KEY or ABT_MAILER_URL and ABT_MAILER_HMAC_SECRET.
+ * Without them nothing is sent and callers carry on: an email must never be
+ * the reason a payment fails to record.
+ *
+ * `kind` names the mail ("sd.receipt") in ABT-Mailer's logs. `idempotencyKey`
+ * stays the same when the caller retries the same mail, so ABT-Mailer sends it
+ * once. `skipped` means the mailer declined on purpose (a bounced or
+ * unsubscribed address): not a failure, and retrying won't change it.
+ */
+export async function sendMail({ to, subject, html, text, replyTo, kind, idempotencyKey, headers }: {
+  to: { email: string; name?: string };
+  subject: string;
+  html: string;
+  text: string;
+  replyTo?: string;
+  kind: string;
+  idempotencyKey?: string;
+  headers?: Record<string, string>;
+}): Promise<MailResult> {
+  const from = process.env.MAIL_FROM;
+  if (!from) return { ok: false, reason: "not configured" };
+  const reply = replyTo || process.env.MAIL_REPLY_TO || from;
+
+  // Local testing against the shared database: every mail goes to one inbox,
+  // never to the real learner. Ignored in production.
+  const redirect = process.env.NODE_ENV !== "production" ? process.env.MAIL_REDIRECT_TO : undefined;
+  if (redirect) {
+    subject = `[to ${to.email}] ${subject}`;
+    to = { email: redirect };
+    if (idempotencyKey) idempotencyKey = `test:${idempotencyKey}`;
+  }
+
+  if (routesViaAbtMailer(kind)) {
+    const out = await sendViaAbtMailer({
+      kind,
+      idempotencyKey: idempotencyKey ?? randomUUID(),
+      to: to.email,
+      subject,
+      html,
+      text,
+      headers: headers ?? {},
+      from: { email: from, name: SENDER_NAME },
+      replyTo: reply,
+    });
+    if (out.status === "SENT") return { ok: true };
+    return out.status === "SKIPPED" ? { ok: false, reason: out.reason, skipped: true } : { ok: false, reason: out.error.message };
+  }
+
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { ok: false, reason: "not configured" };
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { "api-key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
-      sender: { email: from, name: "Klymb.ai" },
+      sender: { email: from, name: SENDER_NAME },
       to: [to],
-      replyTo: { email: replyTo || process.env.MAIL_REPLY_TO || from },
+      replyTo: { email: reply },
       subject,
       htmlContent: html,
       textContent: text,
+      tags: [kind],
+      ...(headers && Object.keys(headers).length ? { headers } : {}),
     }),
     cache: "no-store",
   }).catch(() => null);
 
-  if (!res?.ok) return { ok: false as const, reason: `brevo ${res?.status ?? "unreachable"}` };
-  return { ok: true as const };
+  if (!res?.ok) return { ok: false, reason: `brevo ${res?.status ?? "unreachable"}` };
+  return { ok: true };
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -80,8 +138,7 @@ ${body}
 </td></tr>
 <tr><td align="center" style="padding:22px 10px 0;font-size:12px;line-height:1.7;color:#8a8785">
   ${wordmark(o.site, C.ink)}<br>
-  <a href="${o.site}/tracks" style="color:#8a8785">Career tracks</a> &nbsp;·&nbsp; ${HIDE_MONEY ? "" : `<a href="${o.site}/refund-policy" style="color:#8a8785">Refund policy</a> &nbsp;·&nbsp; `}<a href="${o.site}/contact" style="color:#8a8785">Contact</a><br>
-  Klymb.ai, a programme of Creators Enterprises Private Limited
+  <a href="${o.site}/tracks" style="color:#8a8785">Career tracks</a> &nbsp;·&nbsp; ${HIDE_MONEY ? "" : `<a href="${o.site}/refund-policy" style="color:#8a8785">Refund policy</a> &nbsp;·&nbsp; `}<a href="${o.site}/contact" style="color:#8a8785">Contact</a>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -285,4 +342,98 @@ export function noteEmail(p: { subject: string; preview: string; eyebrow: string
     ],
   });
   return { subject: p.subject, html, text };
+}
+
+/** The line under every reminder: how to stop them. One click, no sign-in. */
+const reminderFooter = (unsubscribeUrl: string) =>
+  `<div style="font-size:12px;line-height:1.6;color:${C.muted};margin:0 0 12px">You get one reminder on evenings you haven't passed a lesson yet. <a href="${esc(unsubscribeUrl)}" style="color:${C.muted}">Turn off these reminders</a>.</div>`;
+
+/**
+ * The 8 PM System Design nudge, for a learner who hasn't passed a lesson
+ * check today: either the next lesson that is out, or the final assessment
+ * once every lesson is passed. Calm on purpose, like lib/reminders.
+ */
+export function sdReminderEmail(p: {
+  name: string;
+  target: { kind: "lesson"; title: string; minutes: number; position: number } | { kind: "assessment" };
+  /** They can still earn the refund for finishing on schedule, so it's worth saying. */
+  refund: boolean;
+  url: string;
+  unsubscribeUrl: string;
+  siteUrl: string;
+  supportEmail: string;
+}) {
+  const site = esc(p.siteUrl);
+  const lesson = p.target.kind === "lesson" ? p.target : null;
+  // Plain words, no emoji and no name: caps, emoji and "URGENT" are what send a mail to Promotions or spam.
+  const subject = lesson ? `Reminder: "${lesson.title}" is waiting for you` : "Reminder: your System Design final assessment is due today";
+  // "Hello Suyash," when we know the name, else "Hello there,".
+  const hello = `Hello ${p.name || "there"},`;
+  const intro = lesson
+    ? `Today's lesson is ready: about ${lesson.minutes} minutes. Pass its check before midnight India time to keep your streak${p.refund ? " and your 100% refund" : ""}.`
+    : p.refund
+      ? "You've passed every lesson. Score 70% or higher on the final assessment before midnight India time to earn your 100% refund."
+      : "You've passed every lesson. The final assessment is the last step to finishing the course.";
+  const points = lesson
+    ? [
+        { title: `Lesson ${lesson.position}: ${lesson.title}`, body: `A short video, then a quick check. About ${lesson.minutes} minutes.` },
+        { title: "Pass the check", body: "That is what marks the day done. The next day opens at midnight India time." },
+      ]
+    : [
+        { title: "Six questions", body: "One of each type you have practised, across the whole course." },
+        { title: "Finish the course", body: p.refund ? "You have 3 tries today, and your best score counts." : "Take it to complete System Design." },
+      ];
+  const cta = lesson ? "Open the lesson" : "Take the assessment";
+  const text = [
+    hello, "", intro, "",
+    ...points.map((s, i) => `${i + 1}. ${s.title}: ${s.body}`), "",
+    `${cta}: ${p.url}`, "",
+    `Turn off these reminders: ${p.unsubscribeUrl}`, "", "Team Klymb.ai",
+  ].join("\n");
+  const html = layout({
+    site, supportEmail: p.supportEmail,
+    preview: lesson ? `About ${lesson.minutes} minutes. Pick up where you left off.` : "The last step to finishing System Design.",
+    eyebrow: "System Design",
+    title: esc(hello),
+    intro: esc(intro),
+    sections: [
+      `${sectionTitle(lesson ? "Tonight's lesson" : "Final assessment")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${points.map((s, i) => step(i + 1, esc(s.title), esc(s.body))).join("")}
+      </table>${button(esc(p.url), cta)}`,
+      reminderFooter(p.unsubscribeUrl),
+    ],
+  });
+  return { subject, html, text };
+}
+
+/** To someone who pre-registered before System Design took payments: it's open, at the price they locked. */
+export function sdInviteEmail(p: { name: string; price: string; full: string; lessonsOut: number; lessonsTotal: number; url: string; siteUrl: string; supportEmail: string }) {
+  const site = esc(p.siteUrl);
+  const subject = `System Design is open: your ${p.price} price is held`;
+  const text = [
+    `Hi ${p.name},`, "",
+    `You pre-registered for System Design, and it's open now. Your price is held at ${p.price} (instead of ${p.full}).`, "",
+    `Claim your seat: ${p.url}`, "",
+    "What you get",
+    `1. ${p.lessonsOut} of ${p.lessonsTotal} lessons out today, the rest added as they are ready, at no extra cost.`,
+    "2. Short video lessons with a quick check each, in English or Hinglish.",
+    `3. Finish the course and we refund 100% of your fee: ${p.siteUrl}/refund-policy`, "",
+    `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai",
+  ].join("\n");
+  const html = layout({
+    site, supportEmail: p.supportEmail,
+    preview: `Your pre-registration price of ${p.price} is held. Claim your seat.`,
+    eyebrow: "Enrolment is open",
+    title: `It's open, ${esc(p.name)}.`,
+    intro: `You pre-registered for <strong style="color:#fff">System Design</strong>. Your price is held at <strong style="color:#fff">${esc(p.price)}</strong>.`,
+    sections: [
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.line}">${row("Your price", p.price)}${row("Price after the offer", p.full)}</table>${button(esc(p.url), "Claim my seat")}`,
+      `${sectionTitle("What you get")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${step(1, "Lessons out now", `${p.lessonsOut} of ${p.lessonsTotal} lessons today. The rest are added as they are ready, at no extra cost.`)}
+        ${step(2, "Short lessons, one check each", "A few minutes of video, then a quick check. English or Hinglish.")}
+        ${step(3, "Finish it, get 100% back", `Pass every lesson's check and the final assessment. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
+      </table>`,
+    ],
+  });
+  return { subject, html, text };
 }

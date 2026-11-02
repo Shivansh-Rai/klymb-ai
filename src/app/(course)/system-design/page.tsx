@@ -20,7 +20,7 @@ const invitedByOf = cache(async (ref: string | null) => (ref ? inviterFor(ref) :
 /** What a shared link says before it's opened: who sent it, and the sale only while it runs. */
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Params> }): Promise<Metadata> {
   const invitedBy = await invitedByOf(refOf((await searchParams).ref));
-  const title = invitedBy ? `${invitedBy} invited you to System Design` : sdOfferOpen() ? "System Design · Early Diwali offer" : "System Design course";
+  const title = invitedBy ? `${invitedBy} invited you to System Design` : sdOfferOpen() ? "System Design · Early Diwali offer" : "System Design";
   return { title, description, openGraph: { title, description }, twitter: { title, description } };
 }
 
