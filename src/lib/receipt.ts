@@ -5,6 +5,7 @@ import { getTrack } from "@/data/tracks";
 import { formatINR } from "@/lib/format";
 import { db } from "@/lib/db/client";
 import { sdReceiptEmail, sendMail, thankYouEmail } from "@/lib/mail";
+import { referralFor } from "@/lib/referrals";
 import { SD_COURSE } from "@/lib/sd-offer";
 
 /**
@@ -43,7 +44,8 @@ export async function sendReceiptOnce(orderId: string) {
     siteUrl: site.url,
     supportEmail: grievance.email,
   };
-  const mail = sd ? sdReceiptEmail(details) : thankYouEmail({ ...details, trackName: getTrack(pay.track)?.name ?? pay.track });
+  const referral = sd ? await referralFor(pay.email) : null;
+  const mail = sd ? sdReceiptEmail({ ...details, referral: referral?.state === "open" ? referral : null }) : thankYouEmail({ ...details, trackName: getTrack(pay.track)?.name ?? pay.track });
 
   const sent = await sendMail({ to: { email: pay.email, name: reg?.name ?? undefined }, ...mail });
   if (!sent.ok) {

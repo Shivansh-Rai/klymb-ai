@@ -23,8 +23,11 @@ export async function refund(id: string, confirmEmail: string): Promise<RefundRe
   const sql = db();
   if (!keys || !sql) return { ok: false, message: "Unavailable right now." };
 
-  const { data: pay } = await sql.row<{ email: string; status: string; razorpay_payment_id: string | null }>`
-    select email, status, razorpay_payment_id from course.payments where id = ${id}
+  const { data: pay } = await sql.row<{ email: string; status: string; razorpay_payment_id: string | null; referral_earned_at: string | null }>`
+    select p.email, p.status, p.razorpay_payment_id, e.referral_earned_at
+      from course.payments p
+      left join course.enrollments e on e.payment_id = p.id
+     where p.id = ${id}
   `;
   if (!pay?.razorpay_payment_id) return { ok: false, message: "That payment no longer exists." };
   if (pay.status !== "paid") return { ok: false, message: "This payment has already been refunded." };
@@ -35,6 +38,6 @@ export async function refund(id: string, confirmEmail: string): Promise<RefundRe
 
   const result = await refundPayment(keys, pay.razorpay_payment_id);
   if (!result.ok) console.error("refund failed:", pay.razorpay_payment_id, result.message);
-  await logAdmin(admin, "payment.refund", pay.email, { payment_id: pay.razorpay_payment_id, ok: result.ok });
+  await logAdmin(admin, "payment.refund", pay.email, { payment_id: pay.razorpay_payment_id, ok: result.ok, reason: pay.referral_earned_at ? "referral" : null });
   return result;
 }

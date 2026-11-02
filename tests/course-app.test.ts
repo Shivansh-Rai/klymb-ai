@@ -5,7 +5,7 @@ import { LESSON_DAYS } from "../src/data/system-design/lessons";
 import { lessonContent } from "../src/lib/sd-lessons";
 import {
   ALL_IDS, addNote, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
-  migrateLegacy, miniActive, nextQuestion, nextStep, openLesson, pickOption, practiceStart, previewState, setAnswer, stageFor, streak, tick, toStored, togglePlay,
+  markShared, migrateLegacy, miniActive, nextQuestion, nextStep, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
   setLessons, updateLesson, type CourseState,
 } from "../src/lib/course-app";
 
@@ -298,4 +298,19 @@ test("the admin summary counts each learner once per step and finds where they s
   assert.equal(day0.answers[0].right, 1);
   assert.equal(sum.totals.visitors, 2);
   assert.equal(sum.totals.completedAny, 1);
+});
+
+test("a passed lesson can be revisited, a lesson only watched cannot", () => {
+  assert.equal(revisitable(home(), "0-1"), false);
+  assert.equal(revisitable(updateLesson(home(), "0-1", { watched: true }, NOW), "0-1"), false);
+  assert.equal(revisitable(updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW), "0-1"), true);
+});
+
+test("sharing is remembered without counting as a step of the day", () => {
+  const s = updateLesson(home(), "0-1", { watched: true, post: [0, 0, 0, 0, 0] }, NOW);
+  const shared = markShared({ ...s, activeDays: [] }, "0-1");
+  assert.equal(shared.lessons["0-1"].shared, true);
+  assert.deepEqual(shared.lessons["0-1"].post, [0, 0, 0, 0, 0], "the rest of the progress stays");
+  assert.deepEqual(shared.activeDays, [], "no streak day for a share");
+  assert.equal(markShared(shared, "0-1"), shared, "sharing twice changes nothing");
 });

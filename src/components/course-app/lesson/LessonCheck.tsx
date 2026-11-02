@@ -94,6 +94,39 @@ function Questions({ questions, lang, idx, busy, error, onIdx, onDone }: { quest
   );
 }
 
+/** Every question with the learner's pick, the best answer and why. */
+export function Answers({ questions, lang, picks }: { questions: Question[]; lang: Lang; picks: number[] }) {
+  const ui = UI[lang];
+  return (
+    <section aria-label={ui.answers}>
+      <h6 className="sd-h6 mb-2">{ui.answers}</h6>
+      <ol className="m-0 flex list-none flex-col border-t-2 border-sd-divider p-0">
+        {questions.map((q, k) => {
+          const mine = q.choices[picks[k]];
+          const best = q.choices.find((c) => c.best)!;
+          const good = !!mine?.best;
+          return (
+            <li key={q.id} className="sd-a-in grid grid-cols-[28px_minmax(0,1fr)_28px] items-start gap-3 border-b border-sd-divider py-4" style={stagger(k, 70, 600)}>
+              <span className="text-[13px] leading-7 font-extrabold text-sd-accent">{pad(k + 1)}</span>
+              <div className="flex min-w-0 flex-col gap-2">
+                <span className="text-base leading-[1.3] font-extrabold text-pretty">{q.prompt}</span>
+                {!good && <span className="text-[13px] text-sd-n-700"><b>{ui.yours}</b> · {mine ? mine.text : ui.skipped}</span>}
+                <div className="flex flex-col gap-1 rounded-lg bg-sd-surface px-3 py-2.5">
+                  <span className="text-sm font-bold text-pretty">{best.text}</span>
+                  <span className="text-[13px] leading-[1.5] text-sd-n-800 text-pretty">{best.why}</span>
+                </div>
+              </div>
+              <span className={clsx("flex size-7 items-center justify-center rounded-lg border-[1.5px]", good ? "border-sd-ink bg-sd-ink text-sd-bg" : "border-sd-divider text-sd-n-600")} aria-label={good ? "Correct" : "Wrong"}>
+                <Icon name={good ? "check" : "x"} size={14} stroke={good ? 3 : 2.5} />
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 /** The score, the verdict, and every question with its answer explained. */
 function Results({ questions, lang, picks, hasNext, children }: { questions: Question[]; lang: Lang; picks: number[]; hasNext: boolean; children: React.ReactNode }) {
   const ui = UI[lang];
@@ -123,32 +156,7 @@ function Results({ questions, lang, picks, hasNext, children }: { questions: Que
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">{children}</div>
       </div>
 
-      <section aria-label={ui.answers}>
-        <h6 className="sd-h6 mb-2">{ui.answers}</h6>
-        <ol className="m-0 flex list-none flex-col border-t-2 border-sd-divider p-0">
-          {questions.map((q, k) => {
-            const mine = q.choices[picks[k]];
-            const best = q.choices.find((c) => c.best)!;
-            const good = !!mine?.best;
-            return (
-              <li key={q.id} className="sd-a-in grid grid-cols-[28px_minmax(0,1fr)_28px] items-start gap-3 border-b border-sd-divider py-4" style={stagger(k, 70, 600)}>
-                <span className="text-[13px] leading-7 font-extrabold text-sd-accent">{pad(k + 1)}</span>
-                <div className="flex min-w-0 flex-col gap-2">
-                  <span className="text-base leading-[1.3] font-extrabold text-pretty">{q.prompt}</span>
-                  {!good && <span className="text-[13px] text-sd-n-700"><b>{ui.yours}</b> · {mine ? mine.text : ui.skipped}</span>}
-                  <div className="flex flex-col gap-1 rounded-lg bg-sd-surface px-3 py-2.5">
-                    <span className="text-sm font-bold text-pretty">{best.text}</span>
-                    <span className="text-[13px] leading-[1.5] text-sd-n-800 text-pretty">{best.why}</span>
-                  </div>
-                </div>
-                <span className={clsx("flex size-7 items-center justify-center rounded-lg border-[1.5px]", good ? "border-sd-ink bg-sd-ink text-sd-bg" : "border-sd-divider text-sd-n-600")} aria-label={good ? "Correct" : "Wrong"}>
-                  <Icon name={good ? "check" : "x"} size={14} stroke={good ? 3 : 2.5} />
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <Answers questions={questions} lang={lang} picks={picks} />
     </div>
   );
 }

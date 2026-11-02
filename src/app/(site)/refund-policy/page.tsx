@@ -8,7 +8,7 @@ import { formatINR } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Refund Policy",
-  description: "Finish the course and we refund 100% of your fee. The conditions, in full.",
+  description: "Finish the course, or get 3 friends to buy it, and we refund 100% of your fee. The conditions, in full.",
 };
 
 /** The course on sale. It stands alone while HIDE_MONEY keeps the 30-day tracks' fees off the site. */
@@ -27,8 +27,8 @@ function SystemDesignRefund({ n }: { n: string }) {
       <p>{sdRefund.forfeit}</p>
       <p>{sdRefund.duplicate}</p>
       <p>
-        This refund is tied to finishing the course and nothing else. It is not a job guarantee. To claim, or if you
-        disagree with a decision, write to <a href={`mailto:${grievance.email}`}>{grievance.email}</a>. We acknowledge
+        This refund is tied to finishing the course or to the referral offer, and nothing else. It is not a job guarantee.
+        To claim, or if you disagree with a decision, write to <a href={`mailto:${grievance.email}`}>{grievance.email}</a>. We acknowledge
         within {grievance.acknowledgeWithin} and aim to resolve within {grievance.resolveWithin}. Nothing in this policy
         limits your rights under India&apos;s consumer protection law.
       </p>
@@ -36,11 +36,28 @@ function SystemDesignRefund({ n }: { n: string }) {
   );
 }
 
+function SystemDesignReferral({ n }: { n: string }) {
+  const { referral } = sdRefund;
+  return (
+    <Section n={n} title="System Design: refer 3 friends" plain="3 friends buy within 10 days of your purchase: your fee comes back in full and you keep the course.">
+      <p>{referral.headline}</p>
+      <p>All of the following must be true:</p>
+      <ul>
+        {referral.conditions.map((c) => <li key={c}>{c}</li>)}
+      </ul>
+      <p>{referral.payout}</p>
+      <p>{referral.once}</p>
+      <p>{referral.forfeit}</p>
+    </Section>
+  );
+}
+
 export default function RefundPolicyPage() {
   if (HIDE_MONEY) {
     return (
-      <LegalPage title="Refund Policy" intro={sdRefund.headline}>
+      <LegalPage title="Refund Policy" intro={`${sdRefund.headline} ${sdRefund.referral.headline}`}>
         <SystemDesignRefund n="1." />
+        <SystemDesignReferral n="2." />
       </LegalPage>
     );
   }
@@ -50,6 +67,7 @@ export default function RefundPolicyPage() {
       intro={refund.headline}
     >
       <SystemDesignRefund n="A." />
+      <SystemDesignReferral n="B." />
       {allFree && (
         <p className="mb-8 rounded-card bg-red-tint p-4 text-sm font-semibold text-ink">
           Every Klymb.ai course is free right now: no payment is taken, so there is nothing to refund. This policy applies to paid courses

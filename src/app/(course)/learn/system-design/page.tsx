@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { auth, verifiedEmailFrom } from "@/auth";
 import { CourseApp } from "@/components/course-app/CourseApp";
 import { hasCourseAccess } from "@/lib/access";
+import { referralFor } from "@/lib/referrals";
 import { lessonContent } from "@/lib/sd-lessons";
 import { SD_COURSE } from "@/lib/sd-offer";
 
@@ -17,5 +18,6 @@ export default async function SystemDesignCoursePage() {
   const session = await auth();
   const email = verifiedEmailFrom(session);
   const enrolled = !!email && (await hasCourseAccess(email, SD_COURSE));
-  return <CourseApp user={email ? { email, name: session?.user?.name ?? null } : null} lessons={lessonContent(enrolled)} enrolled={enrolled} />;
+  const referral = email && enrolled ? await referralFor(email) : null;
+  return <CourseApp user={email ? { email, name: session?.user?.name ?? null } : null} lessons={lessonContent(enrolled)} enrolled={enrolled} referral={referral} />;
 }

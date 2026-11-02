@@ -4,12 +4,13 @@ import clsx from "clsx";
 import { useEffect, useRef, type ReactNode } from "react";
 import { MODULES } from "@/data/system-design/course-app";
 import {
-  ALL_IDS, addNote, assessmentStep, practiceStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
+  ALL_IDS, addNote, assessmentStep, practiceStep, audioTrack, checkStageFor, completeNext, dayOf, flowDone, revisitable, fmt, hasQuickCheck, lesson, lessonDay, lineAt, moduleIds, openLesson, pad, quickCheckAt,
   addRewatch, retryVideo, seekTo, subtitleLines, togglePlay, updateLesson, type CourseState, type PlayerTab,
 } from "@/lib/course-app";
 import { Icon } from "../icons";
 import { Community } from "../lesson/Community";
 import { LessonStage } from "../lesson/Practice";
+import { Revisit } from "../lesson/Revisit";
 import { Tour } from "../lesson/Tour";
 import { track } from "../track";
 import { BackButton, Duration, LessonMark, lessonView } from "../ui";
@@ -247,6 +248,7 @@ export function Player({ s, act }: { s: CourseState; act: Act }) {
               </div>
             </div>
           )}
+          {watching && day && revisitable(s, s.cur) && <div className="px-5 lg:px-0"><Revisit s={s} act={act} id={s.cur} day={day} /></div>}
         </div>
 
         {!hideChrome && <div data-tour="tabs" className="mt-4 flex flex-col lg:col-start-2 lg:row-start-1 lg:mt-0 lg:overflow-hidden lg:rounded-xl lg:border-2 lg:border-sd-divider">

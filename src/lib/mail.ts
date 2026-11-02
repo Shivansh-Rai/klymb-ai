@@ -1,5 +1,6 @@
 import "server-only";
 import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
+import { SD_REFERRAL } from "@/lib/sd-offer";
 import { HIDE_MONEY } from "@/lib/site-status";
 
 const SD_LIVE = `${BUILT_LESSONS.length} of the ${MODULES.reduce((n, m) => n + m.lessons.length, 0)} lessons are out today`;
@@ -118,9 +119,11 @@ export function thankYouEmail(p: { name: string; trackName: string; amount: stri
 }
 
 /** The receipt and welcome for System Design. Early access, so it says what is out and what is coming. */
-export function sdReceiptEmail(p: { name: string; amount: string; paymentId: string; siteUrl: string; supportEmail: string }) {
+export function sdReceiptEmail(p: { name: string; amount: string; paymentId: string; siteUrl: string; supportEmail: string; referral?: { link: string; ends: string } | null }) {
   const site = esc(p.siteUrl);
   const subject = "You're in: System Design";
+  const friends = `Get ${SD_REFERRAL.friends} friends to buy`;
+  const referralLine = p.referral ? `${friends} with your link by ${p.referral.ends} and we refund 100% of your fee. You keep the course.` : null;
   const text = [
     `Hi ${p.name},`, "",
     "Your System Design seat is confirmed. Your payment went through and every lesson that is out is open to you now.", "",
@@ -128,7 +131,8 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
     "What happens next",
     `1. Open ${p.siteUrl}/learn/system-design and sign in with the Google account you paid with.`,
     `2. This is early access: ${SD_LIVE}, and the rest are added as they are ready, at no extra cost.`,
-    `3. Finish the whole course and we refund 100% of your fee. The conditions: ${p.siteUrl}/refund-policy`, "",
+    `3. Finish the whole course and we refund 100% of your fee. The conditions: ${p.siteUrl}/refund-policy`,
+    ...(p.referral ? [`4. ${referralLine} Your link: ${p.referral.link}`] : []), "",
     `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai",
   ].join("\n");
   const html = layout({
@@ -143,8 +147,26 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
         ${step(1, "Sign in with the same Google account", "The account you paid with is the one that holds your seat.")}
         ${step(2, "This is early access", `${SD_LIVE[0].toUpperCase()}${SD_LIVE.slice(1)}. The rest are added as they are ready, at no extra cost.`)}
         ${step(3, "Finish the course, get 100% back", `Pass every lesson's check and the final assessment. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
+        ${p.referral ? step(4, "Or get it back by referring friends", `${esc(referralLine!)} <a href="${esc(p.referral.link)}" style="color:${C.maroon}">Your link</a>`) : ""}
       </table>`,
     ],
+  });
+  return { subject, html, text };
+}
+
+/** Sent once, when someone's third friend buys. */
+export function sdReferralEarnedEmail(p: { name: string; amount: string; siteUrl: string; supportEmail: string }) {
+  const site = esc(p.siteUrl);
+  const subject = `You've earned your ${p.amount} back`;
+  const line = `${SD_REFERRAL.friends} friends bought System Design with your link, so you've earned your ${p.amount} back. It reaches your original payment method within 14 working days. You keep the course.`;
+  const text = [`Hi ${p.name},`, "", line, "", `The conditions: ${p.siteUrl}/refund-policy`, "", `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai"].join("\n");
+  const html = layout({
+    site, supportEmail: p.supportEmail,
+    preview: `Your ${p.amount} is on its way back.`,
+    eyebrow: "Referral reward",
+    title: `Nice work, ${esc(p.name)}.`,
+    intro: esc(line),
+    sections: [button(`${site}/learn/system-design`, "Back to the course")],
   });
   return { subject, html, text };
 }

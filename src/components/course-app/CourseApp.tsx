@@ -5,8 +5,10 @@ import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { TAB_SCREENS, fmt, hasQuickCheck, lesson, miniActive, openLesson, streak, togglePlay, type CourseState, type LessonContent, type Tab } from "@/lib/course-app";
+import type { ReferralView } from "@/lib/sd-offer";
 import { Icon, type IconName } from "./icons";
 import { Commitment, LeaveQuizDialog, Onboarding, PaywallSheet, QuickCheckSheet, Splash, StreakPop, Toast } from "./Overlays";
+import { ReferralProvider, ReferralSheet } from "./Referral";
 import { Course } from "./screens/Course";
 import { Home } from "./screens/Home";
 import { Notifications } from "./screens/Inbox";
@@ -122,7 +124,7 @@ function TabBar({ s, act }: { s: CourseState; act: Act }) {
  * `lessons` is what this viewer may open, read on the server: paid lessons
  * reach the browser only this way.
  */
-export function CourseApp({ user = null, lessons, enrolled }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean }) {
+export function CourseApp({ user = null, lessons, enrolled, referral = null }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean; referral?: ReferralView | null }) {
   const { s, act, ready } = useCourseApp({ lessons, enrolled });
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -149,6 +151,7 @@ export function CourseApp({ user = null, lessons, enrolled }: { user?: CourseUse
 
   return (
     <CourseUserProvider value={user}>
+    <ReferralProvider value={referral}>
     <div className="sd-app relative flex h-dvh flex-col overflow-hidden lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
       <Sidebar s={s} act={act} />
       <div
@@ -182,8 +185,10 @@ export function CourseApp({ user = null, lessons, enrolled }: { user?: CourseUse
       {s.qcOpen && s.screen === "player" && hasQuickCheck(s.cur) && <QuickCheckSheet s={s} act={act} />}
       {s.confirmExit && <LeaveQuizDialog s={s} act={act} />}
       {s.paywall && <PaywallSheet s={s} act={act} />}
+      {referral?.state === "open" && !s.referralSeen && showTabs && <ReferralSheet r={referral} act={act} />}
       {s.toast && <Toast text={s.toast} />}
     </div>
+    </ReferralProvider>
     </CourseUserProvider>
   );
 }

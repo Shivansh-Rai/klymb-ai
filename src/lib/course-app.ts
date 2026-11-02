@@ -32,6 +32,8 @@ export interface Note { t: number; text: string }
 export interface LessonProgress {
   /** Sent the end-of-day feedback. */
   feedback?: boolean;
+  /** Posted (or sent to LinkedIn) from the share card. */
+  shared?: boolean;
   watched?: boolean; read?: boolean; post?: number[];
   /** Estimate answers, as typed. */
   est?: number[];
@@ -60,6 +62,8 @@ export interface CourseState {
   onboarded: boolean;
   onb: number;
   splashUntil: number;
+  /** They've been shown the referral offer on this device. */
+  referralSeen: boolean;
   /** Current lesson id, "module-lesson", zero-based. */
   cur: string;
   t: number;
@@ -324,6 +328,14 @@ export function updateLesson(s: CourseState, id: string, patch: Partial<LessonPr
   return { ...s, lessons: { ...s.lessons, [id]: patch ? { ...(s.lessons[id] ?? {}), ...patch } : {} }, activeDays };
 }
 
+/** Remembers the learner shared this lesson. Not a lesson step, so it does not count towards the streak. */
+export function markShared(s: CourseState, id: string): CourseState {
+  return s.lessons[id]?.shared ? s : { ...s, lessons: { ...s.lessons, [id]: { ...(s.lessons[id] ?? {}), shared: true } } };
+}
+
+/** A lesson passed once can be revisited: its assessment, extra practice and share template sit under the video. */
+export const revisitable = (s: CourseState, id: string) => !!dayOf(id) && !!s.lessons[id]?.post;
+
 const dayKey = (d: Date) => localDate(d);
 /** Current streak (days in a row up to today, or up to yesterday if today isn't done yet) and the longest run. */
 export function streak(s: CourseState, now = Date.now()) {
@@ -375,7 +387,7 @@ const toast = (msg: string, now: number, ms = 2600) => ({ toast: msg, toastUntil
 /** A first visit: nothing done, no baseline yet, the course opens on Day 1. */
 export function defaultState(now = Date.now()): CourseState {
   return {
-    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800,
+    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800, referralSeen: false,
     cur: "0-0", t: 0, playing: false, speed: 1, visited: false, miniHide: null, ended: false, upNext: 0,
     notes: {}, draft: "", ptab: "lessons", openMod: 0, done: [],
     quiz: { kind: "pre", stage: "intro", idx: 0, answers: {} }, timeLeft: TIMED_SECONDS, confirmExit: false,
@@ -632,7 +644,7 @@ export function badges(s: CourseState, now = Date.now()): Badge[] {
 
 /** Fields kept in storage between visits. Preview switches and transient UI stay out. */
 const PERSISTED = [
-  "onboarded", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone", "notifs",
+  "onboarded", "referralSeen", "cur", "t", "speed", "visited", "notes", "openMod", "done", "pre", "post", "qcDone", "notifs",
   "goal", "remind", "autoplay", "quality", "wifiOnly", "streakRem", "replyNotif", "todaySec", "today",
   "lessons", "lang", "subs", "subLang", "subSize", "audio", "volume", "muted", "toured", "activeDays", "commitment", "popDay",
 ] as const satisfies readonly (keyof CourseState)[];

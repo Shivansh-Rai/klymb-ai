@@ -71,6 +71,8 @@ test("Google brings a claim back to the offer, with its campaign", () => {
   assert.equal(offerPath("sd-launch-1"), "/system-design?utm_campaign=sd-launch-1");
   assert.equal(offerPath(null, true), "/system-design?claim=1");
   assert.equal(offerPath("sd-launch-1", true), "/system-design?claim=1&utm_campaign=sd-launch-1");
+  assert.equal(offerPath(null, true, "ABCD2345"), "/system-design?claim=1&ref=ABCD2345");
+  assert.equal(offerPath("sd-launch-1", false, "ABCD2345"), "/system-design?utm_campaign=sd-launch-1&ref=ABCD2345");
 });
 
 test("a campaign tag is short and plain, or dropped", () => {

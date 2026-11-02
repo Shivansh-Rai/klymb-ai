@@ -30,7 +30,7 @@ export function recordPaid(sql: Db, orderId: string, paymentId: string) {
   `;
 }
 
-/** Marks a payment refunded and ends the access it bought, unless the refund was earned by finishing. */
+/** Marks a payment refunded and ends the access it bought, unless the refund was earned by finishing or by referring friends. */
 export function recordRefund(sql: Db, paymentId: string) {
   return sql.run`
     with refunded as (
@@ -42,6 +42,7 @@ export function recordRefund(sql: Db, paymentId: string) {
     update course.enrollments
        set status = 'refunded', updated_at = now()
       from refunded
-     where enrollments.payment_id = refunded.id and enrollments.finished_at is null
+     where enrollments.payment_id = refunded.id
+       and enrollments.finished_at is null and enrollments.referral_earned_at is null
   `;
 }
