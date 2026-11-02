@@ -41,7 +41,6 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
     ["Learning", <>
       <Row><Label label="Lesson language" sub="For questions and cheatsheets." /><Segmented value={s.lang} options={[["en", "English"], ["hi", "Hinglish"]]} onChange={(lang) => act((p) => ({ ...p, lang }))} /></Row>
       <Row><Label label="Daily goal" sub="One lesson step a day keeps your streak." /><Segmented value={s.goal} options={[[5, "5 min"], [15, "15 min"], [30, "30 min"]]} onChange={(goal) => act((p) => ({ ...p, goal }))} /></Row>
-      <Row><Toggle on={s.streakRem} onClick={() => act((p) => ({ ...p, streakRem: !p.streakRem }))} label="Daily reminder" sub="8 pm, only if today’s step isn’t done." /></Row>
     </>],
     ["This device", <>
       <Row>{user ? <Label label="Signed in" sub={user.email} /> : <div className="flex w-full flex-col gap-2"><Label label="Not signed in" sub="Sign in to keep your progress." /><GoogleButton where="profile" lesson={s.cur} className="h-11 border-2 border-sd-ink sm:max-w-[320px]" /></div>}</Row>
@@ -62,7 +61,7 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
         </span>
         <div className="flex flex-col">
           <span className="text-2xl font-extrabold tracking-[-0.02em] lg:text-4xl">{user?.name ?? "Your profile"}</span>
-          <span className="text-[13px] text-sd-n-700">{user ? "Saved to your account" : "Saved on this device"}</span>
+          <span className="text-[13px] text-sd-n-700">{user ? "Lesson passes are saved to your account" : "Saved on this device"}</span>
         </div>
       </div>
       <Stats className="lg:max-w-[520px]" items={[[st.current, "day streak"], [s.done.length, "lessons done"], [badges(s).filter((b) => b.on).length, "badges"]]} />

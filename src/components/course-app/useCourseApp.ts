@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QUESTIONS } from "@/data/system-design/course-app";
 import {
-  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored,
+  START_SCREENS, afterPayment, dayOf, deepLink, defaultState, fromStored, isAnswered, nextQuestion, settingsOnly, pickOption, previewState, setLessons, startEnrolled, tick, togglePlay, toStored, withServerPasses,
   type CourseState, type LessonContent, type StartScreen,
 } from "@/lib/course-app";
 import { useActivity } from "./track";
@@ -21,15 +21,15 @@ const read = (k: string): unknown => { try { return JSON.parse(window.localStora
 export type Act = (fn: (s: CourseState) => CourseState) => void;
 
 /**
- * The app's one store. Progress is saved to this browser only (there is no
- * backend yet). `?start=<screen>` opens a design-review state instead and
+ * The app's one store. Progress is saved to this browser; only lesson passes
+ * are on the server, and `passes` brings those back on a new device. `?start=<screen>` opens a design-review state instead and
  * saves nothing; `&q=` and `&post=1` set the question and a finished
  * post-assessment, as on the design canvas. `?lesson=<id>` opens straight
  * into a lesson (for links from Instagram and the standalone Day pages).
  * `?paid=1` is the return from checkout. Someone new with no seat and no link
  * to a lesson goes to the offer rather than an empty course.
  */
-export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, LessonContent>; enrolled: boolean }) {
+export function useCourseApp({ lessons, enrolled, passes }: { lessons: Record<string, LessonContent>; enrolled: boolean; passes: Record<string, number> }) {
   const [s, setS] = useState<CourseState>(() => defaultState());
   const [ready, setReady] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -53,7 +53,7 @@ export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, Le
       next = previewState(start as StartScreen, { q: Number(params.get("q") ?? 0), seedPost: params.get("post") === "1" });
     } else {
       const raw = read(STORAGE_KEY);
-      next = fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY)));
+      next = withServerPasses(fromStored(raw ?? settingsOnly(read(PREVIOUS_KEY))), passes);
       if (link.current === undefined) {
         link.current = params.get("lesson");
         paid.current = params.has("paid");
@@ -69,7 +69,7 @@ export function useCourseApp({ lessons, enrolled }: { lessons: Record<string, Le
     setS(next);
     setPreviewing(preview.current);
     setReady(true);
-  }, [lessons, enrolled]);
+  }, [lessons, enrolled, passes]);
 
   useEffect(() => {
     if (!ready || preview.current) return;

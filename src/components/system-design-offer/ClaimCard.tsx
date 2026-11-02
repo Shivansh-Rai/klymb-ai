@@ -5,6 +5,7 @@ import { ArrowRight, Briefcase, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { courseSignIn } from "@/app/(course)/learn/system-design/actions";
 import { offerSignIn, offerSwitchAccount } from "@/app/(course)/system-design/actions";
 import { BUILT_LESSONS } from "@/data/system-design/course-app";
 import { LESSON_COUNT } from "@/lib/course-app";
@@ -208,7 +209,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
             <div className="relative flex flex-col">
               <label className="flex min-w-0 flex-col gap-1.5">
                 <span className={label}>Phone</span>
-                <input type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" maxLength={14} aria-invalid={badPhone} className={clsx(input, "pl-[58px]", badPhone ? "border-[#83050b]" : "border-transparent")} />
+                <input type="tel" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" maxLength={16} aria-invalid={badPhone} className={clsx(input, "pl-[58px]", badPhone ? "border-[#83050b]" : "border-transparent")} />
               </label>
               <span aria-hidden="true" className="pointer-events-none absolute bottom-[15px] left-3.5 font-bold text-[#605d5d]">+91</span>
             </div>
@@ -286,7 +287,10 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
               Buying as <span className="font-bold break-all text-ink">{email}</span>. <button type="submit" className="cursor-pointer border-0 bg-transparent p-0 underline underline-offset-2">Use a different account</button>
             </form>
           ) : (
-            <p className="m-0 text-xs leading-[1.4] text-[#605d5d]">Next you&apos;ll sign in with Google. That account holds your seat.</p>
+            <form action={courseSignIn} onSubmit={(e) => { if (inApp) { e.preventDefault(); setBlocked(true); } }} className="text-xs leading-[1.4] text-[#605d5d]">
+              <input type="hidden" name="lesson" value="" />
+              Next you&apos;ll sign in with Google. That account holds your seat. <button type="submit" className="cursor-pointer border-0 bg-transparent p-0 font-bold text-ink underline underline-offset-2">Already bought? Sign in</button>
+            </form>
           )}
         </div>
       </div>

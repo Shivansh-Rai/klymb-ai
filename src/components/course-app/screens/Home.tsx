@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openLesson, pct, startQuiz, streak, type CourseState } from "@/lib/course-app";
+import { ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openFinal, openLesson, pct, streak, type CourseState } from "@/lib/course-app";
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
@@ -52,6 +52,10 @@ function kamranSays(s: CourseState, first: string | null) {
   const name = lessonDay(s.cur);
   const hi = first ? `Hi ${first}! ` : "Welcome back! ";
   if (isSoon(s.cur)) return `All released days done. ${name} is coming soon.`;
+  if (s.done.includes(s.cur)) {
+    const after = ALL_IDS.find((id) => !s.done.includes(id));
+    if (after) return isSoon(after) ? `All released days done. ${lessonDay(after)} is coming soon.` : `${hi}${lessonDay(after)} is next.`;
+  }
   const p = s.lessons[s.cur];
   const day = dayOf(s.cur);
   if (!day) return `${hi}${name} is in the full course.`;
@@ -79,7 +83,7 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
     },
     {
       num: "03", title: "Final assessment", sub: s.post ? "Done" : "After Day 21", value: postP ?? "—",
-      go: () => act((p) => (p.post ? { ...p, screen: "results", lastKind: "post" } : startQuiz(p, "post"))),
+      go: () => act((p) => openFinal(p)),
     },
   ];
   const gm = Math.floor(s.todaySec / 60);
