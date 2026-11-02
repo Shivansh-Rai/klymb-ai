@@ -346,7 +346,7 @@ export function sdReminderEmail(p: {
 }) {
   const site = esc(p.siteUrl);
   const lesson = p.target.kind === "lesson" ? p.target : null;
-  const subject = lesson ? `Today's System Design lesson: ${lesson.title}` : "Your System Design final assessment is waiting";
+  const subject = lesson ? `Reminder: today's System Design lesson is "${lesson.title}"` : "Reminder: your System Design final assessment is waiting";
   const intro = lesson
     ? p.behind > 1
       ? `You have ${p.behind} lessons waiting. Start with this one: about ${lesson.minutes} minutes, and its check counts toward your 100% refund.`
