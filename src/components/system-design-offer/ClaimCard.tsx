@@ -8,6 +8,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { courseSignIn } from "@/app/(course)/learn/system-design/actions";
 import { offerSignIn, offerSwitchAccount } from "@/app/(course)/system-design/actions";
 import { BUILT_LESSONS } from "@/data/system-design/course-app";
+import { FINAL_MARK } from "@/lib/sd-pace";
 import { LESSON_COUNT } from "@/lib/course-app";
 import { formatINR } from "@/lib/format";
 import { loadCheckout, type RazorpaySuccess } from "@/lib/razorpay-checkout";
@@ -270,7 +271,7 @@ export function ClaimCard({ offer, email, name: startName, phone: startPhone, li
 
           <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
             <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">100%</span>
-            <span>Complete the course end to end and get 100% of your money back. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
+            <span><b>100% back if you finish on schedule.</b> One lesson a day, no missed days, and {FINAL_MARK}% or higher on the final assessment. Start any day you like. <Link href="/refund-policy" className="text-[#605d5d] underline underline-offset-2">T&amp;C apply.</Link></span>
           </p>
           <p className="m-0 flex items-start gap-2.5 rounded-[10px] bg-[rgba(201,162,74,.16)] px-3 py-2.5 text-[13px] leading-[1.4] text-pretty">
             <span aria-hidden="true" className="flex-none font-extrabold text-[#8a6a1c]">{SD_REFERRAL.friends} friends</span>

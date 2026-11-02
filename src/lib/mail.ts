@@ -188,7 +188,7 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
     "What happens next",
     `1. Open ${p.siteUrl}/learn/system-design and sign in with the Google account you paid with.`,
     `2. This is early access: ${SD_LIVE}, and the rest are added as they are ready, at no extra cost.`,
-    `3. Finish the whole course and we refund 100% of your fee. The conditions: ${p.siteUrl}/refund-policy`,
+    `3. Finish on schedule and we refund 100% of your fee: one lesson a day, no missed days, and 70% or higher on the final assessment. Miss a day and you can keep learning, but the refund is gone. The conditions: ${p.siteUrl}/refund-policy`,
     ...(p.referral ? [`4. ${referralLine} Your link: ${p.referral.link}`] : []), "",
     `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai",
   ].join("\n");
@@ -203,10 +203,27 @@ export function sdReceiptEmail(p: { name: string; amount: string; paymentId: str
       `${sectionTitle("What happens next")}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${step(1, "Sign in with the same Google account", "The account you paid with is the one that holds your seat.")}
         ${step(2, "This is early access", `${SD_LIVE[0].toUpperCase()}${SD_LIVE.slice(1)}. The rest are added as they are ready, at no extra cost.`)}
-        ${step(3, "Finish the course, get 100% back", `Pass every lesson's check and the final assessment. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
+        ${step(3, "Finish on schedule, get 100% back", `One lesson a day with no missed days, and 70% or higher on the final assessment. Miss a day and you can keep learning, but the refund is gone. <a href="${site}/refund-policy" style="color:${C.maroon}">How the refund works</a>`)}
         ${p.referral ? step(4, "Or get it back by referring friends", `${esc(referralLine!)} <a href="${esc(p.referral.link)}" style="color:${C.maroon}">Your link</a>`) : ""}
       </table>`,
     ],
+  });
+  return { subject, html, text };
+}
+
+/** Sent once per lesson to learners waiting on it: the two-day rule is only fair if they hear it's out. */
+export function sdLessonOutEmail(p: { name: string; day: number; title: string; refundable: boolean; siteUrl: string; supportEmail: string }) {
+  const site = esc(p.siteUrl);
+  const subject = `Day ${p.day} is out`;
+  const line = `Day ${p.day} of System Design is out: ${p.title}. Pass its check today or tomorrow to keep your streak${p.refundable ? " and your refund" : ""}. The day ends at midnight India time.`;
+  const text = [`Hi ${p.name},`, "", line, "", `${p.siteUrl}/learn/system-design`, "", `Questions? Reply to this email or write to ${p.supportEmail}.`, "", "Team Klymb.ai"].join("\n");
+  const html = layout({
+    site, supportEmail: p.supportEmail,
+    preview: `Pass it today or tomorrow to keep your streak.`,
+    eyebrow: "New lesson",
+    title: `Day ${p.day} is out.`,
+    intro: esc(line),
+    sections: [button(`${site}/learn/system-design`, `Start Day ${p.day}`)],
   });
   return { subject, html, text };
 }
@@ -339,8 +356,8 @@ const reminderFooter = (unsubscribeUrl: string) =>
 export function sdReminderEmail(p: {
   name: string;
   target: { kind: "lesson"; title: string; minutes: number; position: number } | { kind: "assessment" };
-  /** Lessons that are out and not passed yet, the next one included. */
-  behind: number;
+  /** They can still earn the refund for finishing on schedule, so it's worth saying. */
+  refund: boolean;
   url: string;
   unsubscribeUrl: string;
   siteUrl: string;
@@ -349,26 +366,22 @@ export function sdReminderEmail(p: {
   const site = esc(p.siteUrl);
   const lesson = p.target.kind === "lesson" ? p.target : null;
   // Plain words, no emoji and no name: caps, emoji and "URGENT" are what send a mail to Promotions or spam.
-  const subject = !lesson
-    ? "Reminder: your System Design final assessment is waiting"
-    : p.behind > 1
-      ? `Reminder: ${p.behind} System Design lessons are waiting for you`
-      : `Reminder: "${lesson.title}" is waiting for you`;
+  const subject = lesson ? `Reminder: "${lesson.title}" is waiting for you` : "Reminder: your System Design final assessment is due today";
   // "Hello Suyash," when we know the name, else "Hello there,".
   const hello = `Hello ${p.name || "there"},`;
   const intro = lesson
-    ? p.behind > 1
-      ? `You have ${p.behind} lessons waiting. Start with this one: about ${lesson.minutes} minutes, and its check counts toward your 100% refund.`
-      : `Your next lesson is ready: about ${lesson.minutes} minutes, and its check counts toward your 100% refund.`
-    : "You've passed every lesson. The final assessment is the last step to finishing the course and your 100% refund.";
+    ? `Today's lesson is ready: about ${lesson.minutes} minutes. Pass its check before midnight India time to keep your streak${p.refund ? " and your 100% refund" : ""}.`
+    : p.refund
+      ? "You've passed every lesson. Score 70% or higher on the final assessment before midnight India time to earn your 100% refund."
+      : "You've passed every lesson. The final assessment is the last step to finishing the course.";
   const points = lesson
     ? [
         { title: `Lesson ${lesson.position}: ${lesson.title}`, body: `A short video, then a quick check. About ${lesson.minutes} minutes.` },
-        { title: "Pass the check", body: "That is what marks the lesson done. You can retry as often as you need." },
+        { title: "Pass the check", body: "That is what marks the day done. The next day opens at midnight India time." },
       ]
     : [
         { title: "Six questions", body: "One of each type you have practised, across the whole course." },
-        { title: "Finish the course", body: "Pass it to complete System Design and earn your refund." },
+        { title: "Finish the course", body: p.refund ? "You have 3 tries today, and your best score counts." : "Take it to complete System Design." },
       ];
   const cta = lesson ? "Open the lesson" : "Take the assessment";
   const text = [

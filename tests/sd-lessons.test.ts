@@ -93,7 +93,7 @@ function importsOf(file: string) {
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
 test("nothing the browser loads can reach a paid lesson", () => {
-  const forbidden = /(data\/system-design\/(lessons|subtitles-en|day-\d|essentials-day-\d)|lib\/sd-lessons)\.ts$/;
+  const forbidden = /(data\/system-design\/(lessons|final|subtitles-en|day-\d|essentials-day-\d)|lib\/sd-lessons)\.ts$/;
   const roots = [...walk("src/components/course-app"), ...walk("src/components/system-design-offer"), "src/lib/course-app.ts"].filter((f) => /\.tsx?$/.test(f));
   const seen = new Set(roots);
   const queue = [...roots];

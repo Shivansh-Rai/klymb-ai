@@ -5,8 +5,9 @@ import { BUILT_LESSONS, MODULES } from "@/data/system-design/course-app";
  * Who gets the 8 PM System Design reminder, and for what. Pure, so it is
  * unit-tested; /api/cron/sd-reminders only loads the rows and sends.
  *
- * The course is self-paced and lessons go live by being added to
- * BUILT_LESSONS, so nothing here has a date per lesson. "Missed today" means
+ * Lessons go live by being added to LESSON_RELEASES. The route also checks
+ * lib/sd-pace, so nobody is pointed at a lesson that isn't open to them yet
+ * and the refund is only mentioned while it can be earned. "Missed today" means
  * an enrolled learner passed no lesson check today (IST). They are pointed at
  * the first lesson in course order that is out and not passed. Once every
  * lesson in the course is passed, the final assessment is the target. A

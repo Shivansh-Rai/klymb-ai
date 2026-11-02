@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import type { Lang, Question } from "@/data/system-design/types";
 import { PASS_MARK, assessmentParts, checkPct, pad, passed, submitCheck, updateLesson, type CourseState, type LessonProgress } from "@/lib/course-app";
+import type { SdProgress } from "@/lib/sd-pace";
 import { shuffledOrder } from "@/lib/shuffle";
 import { Icon } from "../icons";
 import { stagger, useCountUp } from "../ui";
@@ -161,7 +162,7 @@ function Results({ questions, lang, picks, hasNext, children }: { questions: Que
   );
 }
 
-/** Sends an attempt to be graded. The answers come back with it, or null when it couldn't be reached. */
+/** Sends an attempt to be graded. The answers come back with it, or null when it couldn't be reached, or why it was refused. */
 async function grade(lesson: string, picks: number[]) {
   const res = await fetch("/api/sd/check", {
     method: "POST",
@@ -169,7 +170,8 @@ async function grade(lesson: string, picks: number[]) {
     body: JSON.stringify({ lesson, picks: Array.from(picks, (p) => p ?? null) }),
   }).catch(() => null);
   const out = await res?.json().catch(() => null);
-  return res?.ok && out?.review ? (out.review as Record<Lang, Question[]>) : null;
+  if (res?.ok && out?.review) return { review: out.review as Record<Lang, Question[]>, progress: (out.progress ?? null) as SdProgress | null };
+  return { refused: res?.status === 403 && typeof out?.error === "string" ? (out.error as string) : null };
 }
 
 /**
@@ -194,10 +196,11 @@ export function LessonCheck({ s, act, id, questions, hasNext, onPass, onRewatch 
   const finish = async (picks: number[]) => {
     setBusy(true);
     setError("");
-    const review = await grade(id, picks);
+    const out = await grade(id, picks);
     setBusy(false);
-    if (!review) return setError(ui.noGrade);
-    act((q) => ({ ...updateLesson(submitCheck(q, id, review[q.lang], picks), id, { review }), checkStage: "result", checkBusy: false }));
+    const { review, progress, refused } = out;
+    if (!review) return setError(refused ?? ui.noGrade);
+    act((q) => ({ ...updateLesson(submitCheck({ ...q, progress: progress ?? q.progress }, id, review[q.lang], picks), id, { review }), checkStage: "result", checkBusy: false }));
   };
 
   if (stage === "q") {

@@ -73,6 +73,19 @@ function ReferralBadge({ payment }: { payment: PaymentRow }) {
   );
 }
 
+const PACE_WORDS: Record<NonNullable<PaymentRow["pace"]>["refund"], string> = { "on-track": "On schedule", lost: "Refund lost", earned: "Finishing refund earned" };
+
+/** Where a System Design learner stands on the finishing refund: the same rules they see, so this is what to check before paying a claim. */
+function PaceBadge({ payment }: { payment: PaymentRow }) {
+  if (!payment.pace) return null;
+  const { refund, missed_on: missed, day } = payment.pace;
+  return (
+    <span className={`text-xs font-bold ${refund === "earned" ? "text-red-deep" : "text-muted"}`}>
+      {PACE_WORDS[refund]}{missed ? `: missed ${missed}` : refund === "on-track" ? `, on Day ${day}` : ""}
+    </span>
+  );
+}
+
 function RefundCell({ payment, canRefund }: { payment: PaymentRow; canRefund: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState("");
@@ -95,6 +108,7 @@ function RefundCell({ payment, canRefund }: { payment: PaymentRow; canRefund: bo
       <span className="flex flex-col items-start gap-0.5">
         <span className="text-xs font-bold uppercase tracking-wider text-ink">Paid</span>
         <ReferralBadge payment={payment} />
+        <PaceBadge payment={payment} />
         <span className="text-xs text-muted">Refunds only from {REFUND_EMAIL}</span>
       </span>
     );
@@ -106,6 +120,7 @@ function RefundCell({ payment, canRefund }: { payment: PaymentRow; canRefund: bo
     <span className="flex flex-col items-start gap-1">
       <span className="text-xs font-bold uppercase tracking-wider text-ink">Paid</span>
       <ReferralBadge payment={payment} />
+      <PaceBadge payment={payment} />
       {confirming ? (
         <>
           {daysLeft > 0 && (

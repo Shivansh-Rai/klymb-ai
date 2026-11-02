@@ -25,9 +25,10 @@ export function CookieBanner() {
     <div
       role="region"
       aria-label="Cookie notice"
-      className="fixed inset-x-3 bottom-24 z-50 rounded-card bg-night p-4 text-sm text-paper shadow-float sm:inset-x-auto sm:bottom-4 sm:left-4 sm:max-w-sm lg:bottom-4"
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-card bg-night p-4 text-sm text-paper shadow-float sm:inset-x-auto sm:bottom-4 sm:left-4 sm:max-w-sm"
     >
-      <p className="leading-relaxed text-white/85">
+      {/* On a phone the help button sits over this corner: the text stays clear of it. */}
+      <p className="pr-14 leading-relaxed text-white/85 sm:pr-0">
         We use Google Analytics to see which pages help people. No ads, no selling data.{" "}
         <Link href="/cookies" className="font-semibold text-white underline underline-offset-2">Cookie Policy</Link>
       </p>

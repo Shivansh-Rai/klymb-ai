@@ -59,26 +59,45 @@ export const MODULES: CourseModule[] = [
   },
 ];
 
-/** The lessons that exist, by lesson id ("module-lesson", zero-based). Every other lesson is coming soon. */
-export const BUILT_LESSONS = ["0-0", "0-1", "0-2", "0-3", "0-4", "0-5", "0-6", "1-1", "1-3"];
+/**
+ * The lessons that exist, by lesson id ("module-lesson", zero-based), with the
+ * day each went live in India. Adding a lesson here releases it: use the day it
+ * really goes out, because learners waiting on it have that day and the next to
+ * pass it. Every other lesson is coming soon.
+ */
+export const LESSON_RELEASES: Record<string, string> = {
+  "0-0": "2026-10-31",
+  "0-1": "2026-10-31",
+  "0-2": "2026-11-02",
+  "0-3": "2026-11-02",
+  "0-4": "2026-11-02",
+  "0-5": "2026-11-02",
+  "0-6": "2026-11-02",
+  "1-1": "2026-11-02",
+  "1-3": "2026-11-02",
+};
+export const BUILT_LESSONS = Object.keys(LESSON_RELEASES);
 /** Open to everyone. None: the course overview video is the free part, and every lesson needs a seat. */
 export const FREE_LESSONS: string[] = [];
 
 export type Question =
-  | { type: "mcq" | "timed"; typeLabel: string; topic: string; prompt: string; options: string[]; ans: number }
-  | { type: "multi"; typeLabel: string; topic: string; prompt: string; options: string[]; ans: number[] }
-  | { type: "diagram"; typeLabel: string; topic: string; prompt: string; ans: number }
+  | { type: "mcq" | "timed" | "multi"; typeLabel: string; topic: string; prompt: string; options: string[] }
+  | { type: "diagram"; typeLabel: string; topic: string; prompt: string }
   | { type: "order"; typeLabel: string; topic: string; prompt: string; items: string[]; start: number[] }
   | { type: "text"; typeLabel: string; topic: string; prompt: string };
 
-/** The pre- and post-assessment ask the same six questions, one of each type. */
+/**
+ * The final assessment: six questions, one of each type. These reach every
+ * browser, so they carry no answers: those are in final.ts, on the server, and
+ * the steps of the "order" question are listed shuffled.
+ */
 export const QUESTIONS: Question[] = [
-  { type: "mcq", typeLabel: "Multiple choice", topic: "Scaling", prompt: "A service gets 10× more reads than writes. What helps most first?", options: ["Add read replicas and a cache", "Shard the database by user", "Add a message queue in front", "Move to one bigger server"], ans: 0 },
-  { type: "multi", typeLabel: "Multi-select", topic: "Load balancing", prompt: "Which make app servers safe to add or remove behind a load balancer? Pick all that apply.", options: ["Sessions in a shared store", "Uploaded files on local disk", "An in-memory counter on each server", "No user state kept on the server"], ans: [0, 3] },
-  { type: "diagram", typeLabel: "Pick the architecture", topic: "Availability", prompt: "Which design keeps taking orders if one database node dies?", ans: 1 },
-  { type: "order", typeLabel: "Order the steps", topic: "Request flow", prompt: "Put a read that misses the cache in order.", items: ["DNS lookup", "Load balancer", "App server", "Cache (miss)", "Database"], start: [1, 3, 0, 4, 2] },
+  { type: "mcq", typeLabel: "Multiple choice", topic: "Scaling", prompt: "A service gets 10× more reads than writes. What helps most first?", options: ["Add read replicas and a cache", "Shard the database by user", "Add a message queue in front", "Move to one bigger server"] },
+  { type: "multi", typeLabel: "Multi-select", topic: "Load balancing", prompt: "Which make app servers safe to add or remove behind a load balancer? Pick all that apply.", options: ["Sessions in a shared store", "Uploaded files on local disk", "An in-memory counter on each server", "No user state kept on the server"] },
+  { type: "diagram", typeLabel: "Pick the architecture", topic: "Availability", prompt: "Which design keeps taking orders if one database node dies?" },
+  { type: "order", typeLabel: "Order the steps", topic: "Request flow", prompt: "Put a read that misses the cache in order.", items: ["Load balancer", "Cache (miss)", "DNS lookup", "Database", "App server"], start: [0, 1, 2, 3, 4] },
   { type: "text", typeLabel: "Short answer", topic: "Trade-offs", prompt: "In a sentence or two: during a network partition, what does CAP make you choose between?" },
-  { type: "timed", typeLabel: "Timed · 30 seconds", topic: "Estimation", prompt: "1 crore daily users each make 20 requests. Roughly what’s the average requests per second?", options: ["About 230", "About 2,300", "About 23,000", "About 2,30,000"], ans: 1 },
+  { type: "timed", typeLabel: "Timed · 30 seconds", topic: "Estimation", prompt: "1 crore daily users each make 20 requests. Roughly what’s the average requests per second?", options: ["About 230", "About 2,300", "About 23,000", "About 2,30,000"] },
 ];
 
 /** Seconds allowed for the timed question. */

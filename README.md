@@ -227,7 +227,10 @@ claimed during the offer keeps its price.
 | What of the course reaches a browser | `src/lib/sd-lessons.ts` |
 | Grades a lesson check | `src/app/api/sd/check` |
 | The refund terms | `sdRefund` in `src/data/legal.ts`, shown on `/refund-policy` and `/terms` |
-| The referral offer: rules, the buyer's card and sheet | `SD_REFERRAL` in `src/lib/sd-offer.ts`, `src/lib/referrals.ts`, `src/components/course-app/Referral.tsx` |
+| One day at a time, the streak and who keeps the refund | `src/lib/sd-pace.ts`. Change `sdRefund` with it |
+| Release a lesson | Add it to `LESSON_RELEASES` in `src/data/system-design/course-app.ts`, dated the day it goes live: waiting learners get that day and the next |
+| Grades the final assessment | `src/app/api/sd/final`, with the answers in `src/data/system-design/final.ts` |
+| The referral offer: rules, the Refer tab, the buyer's card and sheet | `SD_REFERRAL` in `src/lib/sd-offer.ts`, `src/lib/referrals.ts`, `src/components/course-app/Referral.tsx`, `screens/Refer.tsx` |
 
 **The lock is on the server.** Lesson content lives in
 `src/data/system-design/lessons.ts`, and `/learn/system-design` passes the app only
@@ -249,7 +252,10 @@ by the third purchase: it sends the buyer one email, and it is what stops
 `recordRefund` from ending their access. Nothing is refunded automatically. The
 Payments tab shows "3/3 friends, refund due", and the refund admin pays it there.
 Buyers from before `SD_REFERRAL.startsAt` get their 10 days from that date, so set it
-to the launch day.
+to the launch day. The Refer tab shows a buyer their link and progress, and tells
+everyone else why they have none. `/learn/system-design?start=refer` previews a buyer's
+screen from any seat. A browser keeps a code for 14 days (`RememberReferral`), so a
+friend who comes back without the link still counts.
 
 **Deploying.** Run `npm run db:migrate` before the code goes live. Until it has run
 nobody can buy: the order route stops rather than take money it can't record a seat

@@ -53,7 +53,7 @@ export function routesViaAbtMailer(kind: string, env: Record<string, string | un
  * of money they paid, or a refund they earned. ABT-Mailer only lets a hard
  * bounce stop these.
  */
-const ESSENTIAL_KINDS = kindList("payment.receipt,sd.receipt,sd.referral_earned");
+const ESSENTIAL_KINDS = kindList("payment.receipt,sd.receipt,sd.referral_earned,sd.lesson_out");
 
 export function abtMailerCategory(kind: string): "TRANSACTIONAL_ESSENTIAL" | "TRANSACTIONAL_NONESSENTIAL" {
   return kindMatches(ESSENTIAL_KINDS, kind) ? "TRANSACTIONAL_ESSENTIAL" : "TRANSACTIONAL_NONESSENTIAL";

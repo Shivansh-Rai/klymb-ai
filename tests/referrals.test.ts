@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
-import { defaultState, fromStored, toStored } from "../src/lib/course-app";
+import { TAB_SCREENS, defaultState, fromStored, previewState, toStored } from "../src/lib/course-app";
 import {
-  REFERRAL_ALPHABET, REFERRAL_CODE_LENGTH, SD_REFERRAL, refOf, referralCodeProblem, referralDeadline, referralLeft, referralLink, referralProblem, referralState,
+  REFERRAL_ALPHABET, REFERRAL_CODE_LENGTH, REFERRAL_KEPT_DAYS, SD_REFERRAL, keepRef, keptRef, refOf, referralCodeProblem, referralDeadline, referralLeft, referralLink, referralPost, referralProblem, referralState,
 } from "../src/lib/sd-offer";
 
 const DAY = 864e5;
@@ -77,6 +77,37 @@ test("time left reads in days, then hours on the last day", () => {
 
 test("the link is the offer page with the code on it", () => {
   assert.equal(referralLink("https://www.klymb.ai", "ABCD2345"), "https://www.klymb.ai/system-design?ref=ABCD2345");
+});
+
+test("a lesson post carries the link, in the lesson's language", () => {
+  const link = "https://www.klymb.ai/system-design?ref=ABCD2345";
+  assert.equal(referralPost("Day 1 done.", link, "en"), `Day 1 done.\n\nWant to learn this with me? Join here: ${link}`);
+  assert.match(referralPost("Day 1 ho gaya.", link, "hi"), /^Day 1 ho gaya\.\n\nMere saath seekhna hai\? Yahan join karo: https/);
+});
+
+test("a browser keeps a code for 14 days", () => {
+  const now = LAUNCH;
+  const stored = keepRef("ABCD2345", now);
+  assert.equal(REFERRAL_KEPT_DAYS, 14);
+  assert.equal(keptRef(stored, now), "ABCD2345");
+  assert.equal(keptRef(stored, now + 14 * DAY - 1), "ABCD2345");
+  assert.equal(keptRef(stored, now + 14 * DAY), null, "ran out");
+});
+
+test("anything else in that storage is ignored", () => {
+  for (const bad of [null, "", "not json", "null", "{}", '{"code":"ABCD2345"}', `{"code":"<script>","until":${LAUNCH + DAY}}`, `{"code":"ABCD2345","until":"soon"}`]) {
+    assert.equal(keptRef(bad, LAUNCH), null, String(bad));
+  }
+});
+
+test("Refer is a tab, and its preview shows made-up numbers and saves nothing", () => {
+  assert.ok(TAB_SCREENS.includes("refer"));
+  const preview = previewState("refer");
+  assert.equal(preview.screen, "refer");
+  assert.equal(preview.tab, "refer");
+  assert.equal(preview.referralSample, true);
+  assert.equal(defaultState().referralSample, false);
+  assert.equal("referralSample" in toStored(preview), false);
 });
 
 test("the offer is shown once per device, and that survives a reload", () => {

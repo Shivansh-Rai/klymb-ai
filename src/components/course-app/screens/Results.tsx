@@ -2,7 +2,8 @@
 
 import clsx from "clsx";
 import { QUESTIONS, REVIEW_LESSON } from "@/data/system-design/course-app";
-import { isSoon, lesson, lessonDay, openLesson, pct, type CourseState } from "@/lib/course-app";
+import { isSoon, lesson, lessonDay, openLesson, paceNow, pct, startQuiz, type CourseState } from "@/lib/course-app";
+import { FINAL_MARK } from "@/lib/sd-pace";
 import { Icon } from "../icons";
 import { BackButton, stagger, useCountUp } from "../ui";
 import type { Act } from "../useCourseApp";
@@ -28,8 +29,16 @@ export function Results({ s, act }: { s: CourseState; act: Act }) {
       return { id, topic: q.topic, l: lesson(id), soon: isSoon(id) };
     });
   const close = () => act((p) => ({ ...p, screen: "home", tab: "home" }));
-  const cta = close;
-  const ctaLabel = "Back to home";
+  const pace = paceNow(s);
+  const reached = resPct >= FINAL_MARK;
+  // Tries that still count come first; after those, and after the day, it's practice.
+  const again = pace?.state === "final";
+  const left = pace?.finalsLeft ?? 0;
+  const cta = again ? () => act((p) => startQuiz(p, "post")) : close;
+  const ctaLabel = !again ? "Back to home" : left ? `Try again · ${left} ${left === 1 ? "try" : "tries"} left` : "Retake for practice";
+  const verdict = pace?.refund === "earned" && pace.refundable
+    ? `You reached ${FINAL_MARK}%. Your 100% refund is ready to claim.`
+    : reached ? `You reached the ${FINAL_MARK}% mark.` : `${FINAL_MARK}% is the mark.`;
 
   const recList = recs.length > 0 && (
     <div className="mx-5 mt-[22px] lg:mx-0 lg:mt-3">
@@ -55,7 +64,7 @@ export function Results({ s, act }: { s: CourseState; act: Act }) {
           <div className="px-5 pt-1 lg:contents">
             <div className="sd-kicker text-sd-accent-700">Final assessment results</div>
             <div className="mt-1.5 text-[104px] leading-[0.9] font-extrabold tracking-[-0.05em] lg:mt-0 lg:text-[160px] lg:leading-[0.85]" aria-label={`${resPct}%`}>{shown}%</div>
-            <div className="mt-2.5 text-[16px] lg:mt-0 lg:text-[17px]">{res.reduce((x, y) => x + y, 0)} of {QUESTIONS.length} correct</div>
+            <div className="mt-2.5 text-[16px] lg:mt-0 lg:text-[17px]">{res.reduce((x, y) => x + y, 0)} of {QUESTIONS.length} correct. {verdict}</div>
           </div>
           <div className="hidden lg:block">{recList}</div>
         </div>

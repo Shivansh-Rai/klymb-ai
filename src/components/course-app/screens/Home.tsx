@@ -2,12 +2,14 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openFinal, openLesson, pct, streak, type CourseState } from "@/lib/course-app";
+import Link from "next/link";
+import { ALL_IDS, LESSON_COUNT, PASS_MARK, checkAverage, dayOf, fmt, isSoon, lesson, lessonDay, localDate, nextStep, openFinal, openLesson, paceNow, pct, streak, type CourseState } from "@/lib/course-app";
+import { paceMessage, type Pace } from "@/lib/sd-pace";
 import { firstOpenLesson } from "./Course";
 import { GoogleButton, firstName, useCourseUser } from "../user";
 import { Icon } from "../icons";
 import { OverviewVideo } from "../Overlays";
-import { ReferralCard, useReferral } from "../Referral";
+import { ReferralStrip, useReferral } from "../Referral";
 import { Bar, parallax, stagger } from "../ui";
 import type { Act } from "../useCourseApp";
 
@@ -65,10 +67,28 @@ function kamranSays(s: CourseState, first: string | null) {
   return `${hi}Pick up at ${STEP_NAME[next]}.`;
 }
 
+/** Where the learner stands today: one clear line on the day, the streak and the refund. */
+function PaceCard({ pace }: { pace: Pace }) {
+  const { title, body, tone } = paceMessage(pace);
+  return (
+    <div role="status" className={clsx("sd-a-in flex flex-col gap-1 rounded-xl border-2 px-4 py-3.5", tone === "warn" ? "border-sd-accent bg-sd-accent-100" : "border-sd-divider")} style={{ animationDuration: ".5s", animationDelay: "40ms" }}>
+      <span className="text-[17px] font-extrabold tracking-[-0.01em]">{title}</span>
+      <span className="text-sm text-pretty text-sd-n-800">
+        {body}
+        {pace.refund === "earned" && pace.refundable && <> <Link href="/refund-policy" className="underline underline-offset-2">How to claim</Link></>}
+      </span>
+    </div>
+  );
+}
+
 export function Home({ s, act }: { s: CourseState; act: Act }) {
   const user = useCourseUser();
   const referral = useReferral();
-  const c = lesson(s.cur);
+  const pace = paceNow(s);
+  // Today's lesson once it's open, wherever this device last left off.
+  const heroId = pace?.lesson && (pace.state === "start" || pace.state === "open") ? pace.lesson : s.cur;
+  const heroT = heroId === s.cur ? s.t : 0;
+  const c = lesson(heroId);
   const postP = s.post ? pct(s.post) : null;
   const doneCount = s.done.length;
   const coursePct = `${Math.round((doneCount / LESSON_COUNT) * 100)}%`;
@@ -82,13 +102,13 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
       go: () => act((p) => openLesson(p, firstOpenLesson(p))),
     },
     {
-      num: "03", title: "Final assessment", sub: s.post ? "Done" : "After Day 21", value: postP ?? "—",
+      num: "03", title: "Final assessment", sub: s.post ? "Done" : "The day after Day 21", value: postP ?? "—",
       go: () => act((p) => openFinal(p)),
     },
   ];
   const gm = Math.floor(s.todaySec / 60);
   const met = s.todaySec >= s.goal * 60;
-  const heroVerb = `${doneCount || s.t ? "Continue" : "Start"} ${lessonDay(s.cur)}`;
+  const heroVerb = `${pace?.passed.includes(heroId) ? "Revisit" : heroId === s.cur && (doneCount || s.t) ? "Continue" : "Start"} ${lessonDay(heroId)}`;
 
   return (
     <div className="sd-a-screen flex w-full max-w-[1120px] flex-col gap-[22px] px-5 pt-2 pb-7 lg:gap-7 lg:px-0 lg:pt-0 lg:pb-0">
@@ -109,26 +129,30 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
         <span className="text-[13px] font-semibold text-sd-n-700">{doneCount} of {LESSON_COUNT} lessons · {coursePct}</span>
       </div>
 
+      {pace && <PaceCard pace={pace} />}
+
+      {referral?.state === "open" && <ReferralStrip r={referral} act={act} />}
+
       <button
         type="button"
-        onClick={() => act((p) => openLesson(p, p.cur))}
+        onClick={() => act((p) => openLesson(p, heroId))}
         {...parallax}
         aria-label={`${heroVerb} ${c.title}`}
         className="sd-grid sd-a-in relative flex min-h-[340px] w-full cursor-pointer flex-col justify-between gap-7 overflow-hidden rounded-2xl p-[22px] text-left text-sd-bg lg:min-h-[380px] lg:p-10"
         style={{ animationDuration: ".6s", animationDelay: "50ms" }}
       >
         <div className="sd-mid flex flex-col gap-3.5">
-          <span className="text-xs font-extrabold tracking-[0.12em] text-sd-accent-400 uppercase">{lessonDay(s.cur)} · Module {String(c.mi + 1).padStart(2, "0")}</span>
+          <span className="text-xs font-extrabold tracking-[0.12em] text-sd-accent-400 uppercase">{lessonDay(heroId)} · Module {String(c.mi + 1).padStart(2, "0")}</span>
           <span className="sd-near max-w-[760px] text-[40px] leading-[.98] font-extrabold tracking-[-0.035em] text-balance lg:text-[64px]">{c.title}</span>
         </div>
         <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-end">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex justify-between gap-3 text-[13px] text-sd-n-300">
               <span className="min-w-0 truncate">{c.m.title}</span>
-              <span className="flex-none font-bold whitespace-nowrap text-sd-bg">{fmt(s.t)} / {c.dur}</span>
+              <span className="flex-none font-bold whitespace-nowrap text-sd-bg">{fmt(heroT)} / {c.dur}</span>
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-white/18">
-              <div className="h-full rounded-full bg-sd-accent-400 transition-[width] duration-600" style={{ width: `${Math.min(100, (s.t / c.secs) * 100)}%` }} />
+              <div className="h-full rounded-full bg-sd-accent-400 transition-[width] duration-600" style={{ width: `${Math.min(100, (heroT / c.secs) * 100)}%` }} />
             </div>
           </div>
           <span className="flex h-[52px] w-full flex-none items-center justify-between gap-4 rounded-[10px] bg-sd-accent-400 px-[18px] text-base font-extrabold text-sd-ink lg:w-[240px]">
@@ -141,14 +165,12 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
       <div className="sd-a-in flex flex-wrap items-center justify-between gap-3" style={{ animationDuration: ".5s", animationDelay: "100ms" }}>
         <div className="flex min-w-0 flex-1 flex-[1_1_260px] items-center gap-3">
           <Image src="/mascots/kamran-excited-v2.png" alt="Kamran, your study buddy" width={52} height={52} className="size-[52px] flex-none object-contain" />
-          <p className="m-0 text-sm leading-[1.4] text-pretty text-sd-n-800">{kamranSays(s, firstName(user))}</p>
+          <p className="m-0 text-sm leading-[1.4] text-pretty text-sd-n-800">{kamranSays({ ...s, cur: heroId }, firstName(user))}</p>
         </div>
         {!user && s.done.length > 0 && (
           <div className="w-full sm:w-[280px]"><GoogleButton lesson={s.cur} where="home" label="Save progress with Google" className="h-11 border-2 border-sd-ink" /></div>
         )}
       </div>
-
-      {referral && <ReferralCard r={referral} className="sd-a-in lg:max-w-[560px]" />}
 
       <div className="grid items-start gap-6 border-t-2 border-sd-divider pt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-7 lg:pt-6">
         <section aria-label="Today" className="sd-a-in flex min-w-0 flex-col gap-[18px]" style={{ animationDuration: ".5s", animationDelay: "150ms" }}>
@@ -162,7 +184,7 @@ export function Home({ s, act }: { s: CourseState; act: Act }) {
               <span className="text-[15px] font-bold text-sd-n-700">/ {s.goal} min</span>
             </div>
             <Bar value={(s.todaySec / (s.goal * 60)) * 100} className="h-1.5" />
-            <span className="text-xs text-sd-n-700">One lesson keeps your streak.</span>
+            <span className="text-xs text-sd-n-700">Pass today’s lesson to keep your streak.</span>
           </div>
 
           <div className="flex flex-col gap-2">

@@ -1,7 +1,7 @@
 import {
   ArrowDown, ArrowRight, ArrowUp, AudioLines, Award, Bell, Captions, ChartColumn, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
-  CircleAlert, Clock, Copy, Database, Download, FileText, Flame, Gauge, Headphones, House, Keyboard, Layers, Lock, Maximize, Minimize, Minus, MessageSquare, Pause, Play, Plus,
-  RotateCcw, RotateCw, Settings, Shield, Target, Trash, TrendingUp, User, Volume2, VolumeX, WifiOff, X, Zap, type LucideIcon,
+  CircleAlert, Clock, Copy, Database, Download, FileText, Flame, Gauge, Gift, Headphones, House, Keyboard, Layers, Lock, Maximize, Minimize, Minus, MessageSquare, Pause, Play, Plus,
+  RotateCcw, RotateCw, Settings, Share2, Shield, Target, Trash, TrendingUp, User, Volume2, VolumeX, WifiOff, X, Zap, type LucideIcon,
 } from "lucide-react";
 
 const ICONS = {
@@ -10,7 +10,7 @@ const ICONS = {
   up: ArrowUp, down: ArrowDown, rotL: RotateCcw, rotR: RotateCw, plus: Plus, x: X, arrowR: ArrowRight, target: Target,
   trending: TrendingUp, zap: Zap, msg: MessageSquare, bell: Bell, user: User, download: Download, trash: Trash,
   copy: Copy, wifiOff: WifiOff, alert: CircleAlert, db: Database, shield: Shield, headphones: Headphones, settings: Settings, volume: Volume2, mute: VolumeX, fullscreen: Maximize,
-  exitFullscreen: Minimize, captions: Captions, audio: AudioLines, keyboard: Keyboard, gauge: Gauge, minus: Minus,
+  exitFullscreen: Minimize, captions: Captions, audio: AudioLines, keyboard: Keyboard, gauge: Gauge, minus: Minus, gift: Gift, share: Share2,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

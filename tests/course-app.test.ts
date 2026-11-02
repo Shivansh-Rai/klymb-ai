@@ -4,8 +4,8 @@ import { QUESTIONS } from "../src/data/system-design/course-app";
 import { LESSON_DAYS } from "../src/data/system-design/lessons";
 import { lessonContent } from "../src/lib/sd-lessons";
 import {
-  ALL_IDS, addNote, checkStageFor, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, grade, isAnswered, isSoon, lessonSteps, localDate,
-  markShared, migrateLegacy, miniActive, nextQuestion, nextStep, openFinal, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
+  ALL_IDS, addNote, checkStageFor, closeQuiz, completeNext, deepLink, defaultState, flowDone, fmt, fromStored, isAnswered, isSoon, lessonSteps, localDate,
+  markShared, migrateLegacy, miniActive, finalFailed, finishFinal, nextQuestion, nextStep, openFinal, openLesson, pickOption, practiceStart, previewState, revisitable, setAnswer, stageFor, streak, tick, toStored, togglePlay,
   setLessons, updateLesson, withServerPasses, type CourseState,
 } from "../src/lib/course-app";
 
@@ -25,20 +25,6 @@ test("fmt shows m:ss and never goes negative", () => {
   assert.equal(fmt(-5), "0:00");
 });
 
-test("grading each question type", () => {
-  const [mcq, multi, diagram, order, text, timed] = QUESTIONS;
-  assert.equal(grade(mcq, 0), 1);
-  assert.equal(grade(mcq, 1), 0);
-  assert.equal(grade(multi, [3, 0]), 1);
-  assert.equal(grade(multi, [0]), 0);
-  assert.equal(grade(diagram, 1), 1);
-  assert.equal(grade(order, undefined), 0, "the shuffled starting order is wrong");
-  assert.equal(grade(order, [0, 1, 2, 3, 4]), 1);
-  assert.equal(grade(text, "Consistency or availability"), 1);
-  assert.equal(grade(text, "latency"), 0);
-  assert.equal(grade(timed, 1), 1);
-});
-
 test("Next needs an answer, except for ordering", () => {
   const [mcq, multi, , order, text] = QUESTIONS;
   assert.equal(isAnswered(mcq, undefined), false);
@@ -56,19 +42,25 @@ test("multi-select toggles options on and off", () => {
   assert.deepEqual(s.quiz.answers[1], [2]);
 });
 
-test("finishing the final assessment grades it and opens its results", () => {
+test("the last answer sends the attempt to the server, and its grade opens the results", () => {
   let s: CourseState = { ...home(), screen: "quiz", quiz: { kind: "post", stage: "q", idx: 0, answers: {} } };
-  const right: Record<number, Parameters<typeof setAnswer>[1]> = { 0: 0, 1: [0, 3], 2: 1, 3: [0, 1, 2, 3, 4], 4: "consistency vs availability", 5: 1 };
-  for (let i = 0; i < QUESTIONS.length; i++) s = nextQuestion(setAnswer(s, right[i]));
-  assert.equal(s.screen, "results");
-  assert.equal(s.lastKind, "post");
-  assert.deepEqual(s.post, [1, 1, 1, 1, 1, 1]);
+  for (let i = 0; i < QUESTIONS.length; i++) s = nextQuestion(setAnswer(s, 0));
+  assert.equal(s.quiz.stage, "sending");
+  assert.equal(s.screen, "quiz", "no score until the server gives one");
+  assert.equal(s.post, null);
+  const lost = finalFailed(s, "No network", NOW);
+  assert.equal(lost.quiz.stage, "q");
+  assert.equal(lost.quiz.answers[0], 0, "the answers survive");
+  const graded = finishFinal(s, [1, 1, 1, 1, 1, 0], { passes: [], finals: [{ attempt: 1, score: 83, at: "2026-11-09T06:00:00Z" }], refundable: true });
+  assert.equal(graded.screen, "results");
+  assert.deepEqual(graded.post, [1, 1, 1, 1, 1, 0]);
+  assert.equal(graded.progress?.finals.length, 1);
 });
 
 test("the timed question moves on by itself when time runs out", () => {
   let s: CourseState = { ...home(), screen: "quiz", quiz: { kind: "post", stage: "q", idx: 5, answers: {} }, timeLeft: 1 };
   s = tick(s, NOW);
-  assert.equal(s.screen, "results");
+  assert.equal(s.quiz.stage, "sending");
 });
 
 test("closing a started assessment asks first", () => {
@@ -208,13 +200,12 @@ test("a first visit has no sample learner, and an empty inbox", () => {
   assert.equal(streak(s, NOW).current, 0);
 });
 
-test("a finished step counts today; the streak runs back through consecutive days", () => {
+test("a finished step counts towards the week, and the streak comes from the server alone", () => {
   const s = updateLesson(home(), "0-0", { watched: true }, NOW);
   assert.deepEqual(s.activeDays, [localDate(new Date(NOW))]);
-  const day = (n: number) => localDate(new Date(NOW - n * 86_400_000));
-  assert.deepEqual(streak({ ...s, activeDays: [day(0), day(1), day(2), day(5)] }, NOW), { current: 3, longest: 3, today: true });
-  assert.equal(streak({ ...s, activeDays: [day(1), day(2)] }, NOW).current, 2, "today not done yet keeps yesterday's run");
-  assert.equal(streak({ ...s, activeDays: [day(2)] }, NOW).current, 0);
+  assert.deepEqual(streak(s, NOW), { current: 0, longest: 0 }, "nothing in this browser makes a streak");
+  const today = localDate(new Date(NOW));
+  assert.equal(streak({ ...s, progress: { passes: [{ lesson: "0-0", at: `${today}T06:00:00Z` }], finals: [], refundable: true } }, NOW).current, 1);
 });
 
 test("?lesson= opens straight into a lesson; unknown or coming-soon ids are ignored", () => {
@@ -323,9 +314,13 @@ test("old sample messages saved in a browser don't come back", () => {
 test("the final assessment stays shut until every lesson is finished", () => {
   const early = openFinal({ ...home(), done: ["0-0", "0-1"] }, NOW);
   assert.equal(early.screen, "home");
-  assert.equal(early.toast, "The final assessment opens after Day 21");
-  assert.equal(openFinal({ ...home(), done: ALL_IDS }, NOW).screen, "quiz");
-  assert.equal(openFinal({ ...home(), post: [1, 1, 1, 1, 1, 1] }, NOW).screen, "results");
+  assert.equal(early.toast, "The final assessment opens the day after you pass Day 21.");
+  const at = new Date(NOW - 2 * 86_400_000).toISOString();
+  const passes = ALL_IDS.map((lesson) => ({ lesson, at }));
+  const open = { ...home(), progress: { passes, finals: [], refundable: true } };
+  assert.equal(openFinal(open, NOW).screen, "quiz");
+  const tried = { ...open, post: [1, 1, 1, 1, 1, 1], progress: { ...open.progress, finals: [{ attempt: 1, score: 100, at }] } };
+  assert.equal(openFinal(tried, NOW).screen, "results");
 });
 
 test("passes on the server bring a new device up to where the learner was", () => {

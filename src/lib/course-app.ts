@@ -10,6 +10,7 @@ import {
 } from "@/data/system-design/course-app";
 import type { Day, Lang, Question as ChoiceQuestion } from "@/data/system-design/types";
 import type { Board } from "@/lib/canvas";
+import { canTake, lockedMessage, paceOf, type SdProgress } from "@/lib/sd-pace";
 
 /**
  * State and transitions for the System Design course app. Everything here is
@@ -18,9 +19,9 @@ import type { Board } from "@/lib/canvas";
  */
 
 export type Screen =
-  | "splash" | "onboard" | "commit" | "home" | "course" | "progress" | "profile"
+  | "splash" | "onboard" | "commit" | "home" | "course" | "progress" | "refer" | "profile"
   | "player" | "quiz" | "results" | "notifs" | "recap";
-export type Tab = "home" | "course" | "progress" | "profile";
+export type Tab = "home" | "course" | "progress" | "refer" | "profile";
 export type PlayerTab = "lessons" | "qna" | "notes";
 /** "pre" is the retired course baseline; only the final assessment ("post") is taken now. */
 export type QuizKind = "pre" | "post";
@@ -64,6 +65,8 @@ export interface CourseState {
   splashUntil: number;
   /** They've been shown the referral offer on this device. */
   referralSeen: boolean;
+  /** `?start=refer`: show a made-up buyer's offer, for checking the screen from a seat that has none. */
+  referralSample: boolean;
   /** Current lesson id, "module-lesson", zero-based. */
   cur: string;
   t: number;
@@ -79,7 +82,8 @@ export interface CourseState {
   ptab: PlayerTab;
   openMod: number;
   done: string[];
-  quiz: { kind: QuizKind; stage: "intro" | "q"; idx: number; answers: Record<number, Answer> };
+  /** "sending": the last answer is in and the server is grading the attempt. */
+  quiz: { kind: QuizKind; stage: "intro" | "q" | "sending"; idx: number; answers: Record<number, Answer> };
   timeLeft: number;
   confirmExit: boolean;
   /** 1 = correct, 0 = not, per question. */
@@ -135,7 +139,7 @@ export interface CourseState {
   checkIdx: number;
   estIdx: number;
   fuIdx: number;
-  /** Local dates (YYYY-MM-DD) with any finished step: the streak. */
+  /** Local dates (YYYY-MM-DD) with any finished step: the "this week" grid. The streak comes from `progress`. */
   activeDays: string[];
   /** The promise made after the welcome: signed name and local date. */
   commitment: { name: string; date: string } | null;
@@ -144,6 +148,8 @@ export interface CourseState {
   popDay: string;
   /** A lesson this viewer hasn't bought was asked for: the offer is showing. */
   paywall: boolean;
+  /** What the server holds on this learner, read on load and after every grade. Never saved here: it decides the refund. */
+  progress: SdProgress | null;
 }
 
 /** How many of `picks` landed on the best choice. */
@@ -264,7 +270,7 @@ export type SubLang = "hinglish" | "en";
 export type SubSize = "s" | "m" | "l";
 export const SUB_LANGS: [SubLang, string][] = [["hinglish", "Hinglish"], ["en", "English"]];
 /** Tabs keep a lesson playing in the mini player. */
-export const TAB_SCREENS: Screen[] = ["home", "course", "progress", "profile"];
+export const TAB_SCREENS: Screen[] = ["home", "course", "progress", "refer", "profile"];
 
 export const sec = (d: string) => {
   const [m, s] = d.split(":");
@@ -336,42 +342,13 @@ export function markShared(s: CourseState, id: string): CourseState {
 /** A lesson passed once can be revisited: its assessment, extra practice and share template sit under the video. */
 export const revisitable = (s: CourseState, id: string) => !!dayOf(id) && !!s.lessons[id]?.post;
 
-const dayKey = (d: Date) => localDate(d);
-/** Current streak (days in a row up to today, or up to yesterday if today isn't done yet) and the longest run. */
-export function streak(s: CourseState, now = Date.now()) {
-  const days = new Set(s.activeDays);
-  const d = new Date(now);
-  if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  let current = 0;
-  while (days.has(dayKey(d))) { current++; d.setDate(d.getDate() - 1); }
-  const sorted = [...days].sort();
-  let longest = 0, run = 0, prev: Date | null = null;
-  for (const k of sorted) {
-    const [y, m, dd] = k.split("-").map(Number);
-    const cur = new Date(y, m - 1, dd);
-    run = prev && Math.round((cur.getTime() - prev.getTime()) / 864e5) === 1 ? run + 1 : 1;
-    longest = Math.max(longest, run);
-    prev = cur;
-  }
-  return { current, longest, today: days.has(localDate(new Date(now))) };
-}
+/** Where this learner stands today, or null when the server has nothing to say (no seat, or signed out). */
+export const paceNow = (s: CourseState, now = Date.now()) => (s.progress ? paceOf(s.progress, now) : null);
 
-/** 1 if the answer is right. Short answers pass when they name both consistency and availability. */
-export function grade(q: Question, a: Answer | undefined): number {
-  switch (q.type) {
-    case "mcq":
-    case "timed":
-    case "diagram":
-      return a === q.ans ? 1 : 0;
-    case "multi":
-      return Array.isArray(a) && a.length === q.ans.length && q.ans.every((x) => a.includes(x)) ? 1 : 0;
-    case "order":
-      return ((Array.isArray(a) ? a : q.start) as number[]).every((v, i) => v === i) ? 1 : 0;
-    case "text": {
-      const t = (typeof a === "string" ? a : "").toLowerCase();
-      return /consisten/.test(t) && /availab/.test(t) ? 1 : 0;
-    }
-  }
+/** Current streak and the longest run, from the passes on the server. */
+export function streak(s: CourseState, now = Date.now()) {
+  const p = paceNow(s, now);
+  return { current: p?.streak ?? 0, longest: p?.longest ?? 0 };
 }
 
 /** Whether the question has an answer good enough to enable Next. */
@@ -387,7 +364,7 @@ const toast = (msg: string, now: number, ms = 2600) => ({ toast: msg, toastUntil
 /** A first visit: nothing done, no baseline yet, the course opens on Day 1. */
 export function defaultState(now = Date.now()): CourseState {
   return {
-    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800, referralSeen: false,
+    screen: "splash", tab: "home", onboarded: false, onb: 0, splashUntil: now + 1800, referralSeen: false, referralSample: false,
     cur: "0-0", t: 0, playing: false, speed: 1, visited: false, miniHide: null, ended: false, upNext: 0,
     notes: {}, draft: "", ptab: "lessons", openMod: 0, done: [],
     quiz: { kind: "pre", stage: "intro", idx: 0, answers: {} }, timeLeft: TIMED_SECONDS, confirmExit: false,
@@ -398,7 +375,7 @@ export function defaultState(now = Date.now()): CourseState {
     goal: 15, remind: "19:00", autoplay: false, quality: "auto", wifiOnly: true, streakRem: true, replyNotif: true,
     todaySec: 0, today: localDate(new Date(now)),
     toast: null, toastUntil: 0,
-    commitment: null, streakPop: false, popDay: "", paywall: false,
+    commitment: null, streakPop: false, popDay: "", paywall: false, progress: null,
     lessons: {}, lang: "en", subs: false, subLang: "en", subSize: "m", audio: "Hinglish", volume: 1, muted: false,
     toured: false, stage: "watch", checkBusy: false, checkStage: "intro", checkIdx: 0, estIdx: 0, fuIdx: 0, activeDays: [],
   };
@@ -408,7 +385,7 @@ export function defaultState(now = Date.now()): CourseState {
 export const START_SCREENS = [
   "home", "course", "player", "post", "q", "results", "progress", "qc", "mini", "exit",
   "commit", "commitdone", "streak", "lesson", "lessonpass", "lessonfail", "retake",
-  "splash", "onboard", "onboard2", "profile", "notifs", "notifsempty", "discuss", "recap", "offline", "videoerr",
+  "splash", "onboard", "onboard2", "profile", "refer", "notifs", "notifsempty", "discuss", "recap", "offline", "videoerr",
   "tour1", "tour2", "tour3", "tour4", "tour5", "playing", "paused", "tabqna", "tabnotes", "notesempty", "vidoffline",
   "learn", "checkintro", "checkq", "checkpass", "checkfail", "checkpassed", "estq", "build", "builddone", "design", "designwalk", "followq", "followdone", "daydone",
 ] as const;
@@ -455,6 +432,7 @@ export function previewState(start: StartScreen, opts: { q?: number; seedPost?: 
     case "onboard": return { ...s, screen: "onboard", onboarded: false };
     case "onboard2": return { ...s, screen: "onboard", onboarded: false, onb: 2 };
     case "profile": return { ...s, screen: "profile", tab: "profile" };
+    case "refer": return { ...s, screen: "refer", tab: "refer", referralSample: true, referralSeen: true };
     case "notifs": return { ...s, screen: "notifs" };
     case "notifsempty": return { ...s, screen: "notifs", notifs: [] };
     case "recap": return { ...s, screen: "recap", recapMod: 0, done: ["0-0"], cur: "0-1", t: 0, notes: { "0-0": [{ t: 40, text: "Checking stock is not claiming it" }] } };
@@ -523,7 +501,10 @@ export function tick(s: CourseState, now = Date.now()): CourseState {
 export function openLesson(s: CourseState, id: string, now = Date.now(), force = false): CourseState {
   if (isSoon(id)) return { ...s, ...toast(`${lesson(id).title.split(":")[0]} is coming soon`, now) };
   if (isPaywalled(id)) return { ...s, playing: false, paywall: true };
-  if (!force && isLocked(s, id)) return { ...s, ...toast("Pass the previous lesson’s assessment to unlock this one", now, 2400) };
+  // Links can skip the old lock, but nothing skips the day: one at a time is what the refund rests on.
+  const pace = paceNow(s, now);
+  if (pace && !canTake(pace, id)) return { ...s, ...toast(lockedMessage(pace, id), now, 2800) };
+  if (!force && isLocked(s, id, now)) return { ...s, ...toast("Pass the previous lesson’s assessment to unlock this one", now, 2400) };
   const same = id === s.cur;
   return {
     ...s, screen: "player", cur: id, t: same ? s.t : 0, playing: same ? s.playing : false, visited: true, miniHide: null, ended: false, upNext: 0, qcOpen: false,
@@ -544,6 +525,8 @@ export function completeNext(s: CourseState, auto: boolean, now = Date.now()): C
     return { ...s, ...reset, done, cur: nextId ?? s.cur, t: 0, playing: false, screen: "recap", recapMod: cmi, openMod: nextId ? lesson(nextId).mi : cmi };
   }
   if (nextId && isSoon(nextId)) return { ...s, ...reset, ...toast(`Done! ${lesson(nextId).title.split(":")[0]} is coming soon.`, now), done, playing: false, screen: "home", tab: "home" };
+  const pace = paceNow(s, now);
+  if (nextId && pace && !canTake(pace, nextId)) return { ...s, ...reset, ...toast(lockedMessage(pace, nextId), now, 2800), done, playing: false, screen: "home", tab: "home" };
   if (nextId && isPaywalled(nextId)) return { ...s, ...reset, done, cur: nextId, t: 0, playing: false, screen: "home", tab: "home", paywall: true };
   if (nextId) return { ...s, ...reset, ...t, done, cur: nextId, t: 0, playing: auto, openMod: lesson(nextId).mi };
   return { ...s, ...reset, ...t, done };
@@ -553,23 +536,32 @@ export function startQuiz(s: CourseState, kind: QuizKind): CourseState {
   return { ...s, screen: "quiz", quiz: { kind, stage: "intro", idx: 0, answers: {} }, timeLeft: TIMED_SECONDS, playing: false, confirmExit: false };
 }
 
-/** The final assessment: its results once taken, its questions once every lesson is finished, and until then a note saying when. */
-export function openFinal(s: CourseState, now = Date.now()): CourseState {
-  if (s.post) return { ...s, screen: "results", lastKind: "post" };
-  if (!ALL_IDS.every((id) => s.done.includes(id))) return { ...s, ...toast(`The final assessment opens after Day ${LESSON_COUNT}`, now) };
-  return startQuiz(s, "post");
-}
-
 export function setAnswer(s: CourseState, v: Answer): CourseState {
   return { ...s, quiz: { ...s.quiz, answers: { ...s.quiz.answers, [s.quiz.idx]: v } } };
 }
 
-/** Next question, or grade the attempt and open the results after the last one. */
+/** Next question. After the last one the attempt goes to the server, which holds the answers. */
 export function nextQuestion(s: CourseState): CourseState {
   const q = s.quiz;
   if (q.idx < QUESTIONS.length - 1) return { ...s, quiz: { ...q, idx: q.idx + 1 }, timeLeft: TIMED_SECONDS };
-  const scores = QUESTIONS.map((qq, i) => grade(qq, q.answers[i]));
-  return { ...s, [q.kind]: scores, lastKind: q.kind, screen: "results", timeLeft: TIMED_SECONDS };
+  return { ...s, quiz: { ...q, stage: "sending" }, timeLeft: TIMED_SECONDS };
+}
+
+/** The server's grade is back: 1 or 0 per question. */
+export function finishFinal(s: CourseState, results: number[], progress: SdProgress | null): CourseState {
+  return { ...s, post: results, lastKind: "post", screen: "results", quiz: { ...s.quiz, stage: "intro", idx: 0 }, progress: progress ?? s.progress };
+}
+
+/** The attempt couldn't be graded: back on the last question, with the answers kept. */
+export function finalFailed(s: CourseState, message: string, now = Date.now()): CourseState {
+  return { ...s, quiz: { ...s.quiz, stage: "q" }, ...toast(message, now, 3200) };
+}
+
+/** The final assessment: shut until the day after the last lesson, then the results of the latest try, or the questions. */
+export function openFinal(s: CourseState, now = Date.now()): CourseState {
+  const tries = s.progress?.finals.length ?? 0;
+  if (!tries && !paceNow(s, now)?.finalOpen) return { ...s, ...toast(`The final assessment opens the day after you pass Day ${LESSON_COUNT}.`, now, 2800) };
+  return s.post && tries ? { ...s, screen: "results", lastKind: "post" } : startQuiz(s, "post");
 }
 
 /** Toggling an option on a choice question: multi-select adds or removes, the rest pick one. */
@@ -601,7 +593,7 @@ export function answerQuickCheck(s: CourseState, i: number): CourseState {
 export function closeQuickCheck(s: CourseState, how: "continue" | "rewatch" | "skip", now = Date.now()): CourseState {
   const base = { ...s, qcOpen: false, qcDone: s.qcDone.includes(s.cur) ? s.qcDone : [...s.qcDone, s.cur], playing: true };
   if (how === "rewatch") return { ...base, t: Math.max(0, quickCheckAt(s.cur) - 60) };
-  if (how === "continue") return { ...base, ...toast("Quick check done. Streak safe today.", now) };
+  if (how === "continue") return { ...base, ...toast("Quick check done. Keep going.", now) };
   return base;
 }
 
@@ -702,8 +694,14 @@ export function deepLink(s: CourseState, id: string | null, now = Date.now()): C
   if (isPaywalled(id)) return { ...s, onboarded: true, screen: "course", tab: "course", paywall: true };
   // Back from "Continue with Google" on the welcome, or a first visit: the commitment comes before Day 1.
   if (id === "0-0" && !s.commitment && s.done.length === 0) return { ...s, onboarded: true, tab: "course", cur: id, screen: "commit" };
-  // Shared links open their lesson even when it's still locked here.
-  return openLesson({ ...s, onboarded: true, tab: "course" }, id, now, true);
+  // Shared links open their lesson even when it's still locked here. A day that hasn't opened stays shut: the toast says when.
+  const n = openLesson({ ...s, onboarded: true, tab: "course" }, id, now, true);
+  return n.screen === "player" ? n : { ...n, screen: "course" };
+}
+
+/** The server's record, in place of whatever this browser remembers. A score it holds no try for doesn't count. */
+export function withProgress(s: CourseState, progress: SdProgress | null): CourseState {
+  return progress ? { ...s, progress, post: progress.finals.length ? s.post : null } : s;
 }
 
 /** A seat holder this device hasn't seen: no welcome to sit through, just the promises, once. */
@@ -776,7 +774,9 @@ export function audioTrack(s: CourseState, id = s.cur) {
 }
 
 /** Locked until the lesson before it is passed (or done). Lessons not out yet are handled as "coming soon". */
-export function isLocked(s: CourseState, id: string) {
+export function isLocked(s: CourseState, id: string, now = Date.now()) {
+  const pace = paceNow(s, now);
+  if (pace) return !canTake(pace, id);
   // Learners already in a lesson keep it: the check arrived after they had moved on.
   if (id === s.cur || s.done.includes(id) || Object.keys(s.lessons[id] ?? {}).length) return false;
   const i = ALL_IDS.indexOf(id);

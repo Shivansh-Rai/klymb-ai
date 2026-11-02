@@ -5,6 +5,7 @@ import type { SdOfferState, SdRole } from "@/lib/sd-offer";
 import { ClaimCard } from "./ClaimCard";
 import { IntroVideo } from "./IntroVideo";
 import { OfferBackdrop } from "./OfferBackdrop";
+import { RememberReferral } from "./RememberReferral";
 
 const STATS = [["21", "days"], ["15 min", "a day"], ["5", "days of AI design"]];
 
@@ -15,6 +16,7 @@ export function OfferView({ offer, email, name, phone, linkedin, role, campaign,
 }) {
   return (
     <OfferBackdrop>
+      <RememberReferral live={referral?.code ?? null} />
       <main className="relative mx-auto box-border grid min-h-dvh w-full max-w-[1160px] grid-cols-[minmax(0,1fr)] items-center gap-[26px] px-[18px] pt-11 pb-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,.9fr)] lg:gap-16 lg:px-12 lg:py-16">
         <div className="sd-offer-left flex flex-col gap-4 lg:gap-6">
           <div className="flex items-center justify-between gap-3">
@@ -39,7 +41,7 @@ export function OfferView({ offer, email, name, phone, linkedin, role, campaign,
         </div>
 
         <div className="sd-offer-right flex flex-col gap-4">
-          <ClaimCard offer={offer} email={email} name={name} phone={phone} linkedin={linkedin} role={role} campaign={campaign} referral={referral} resume={resume} signInFailed={signInFailed} inApp={inApp} />
+          <ClaimCard key={referral?.code} offer={offer} email={email} name={name} phone={phone} linkedin={linkedin} role={role} campaign={campaign} referral={referral} resume={resume} signInFailed={signInFailed} inApp={inApp} />
           <div className="flex flex-col gap-1.5 text-[13px] leading-[1.4] text-[#b9ad9f]">
             <a href="#course-intro" className="font-bold text-[#f3d48a] underline underline-offset-4">Not sure yet? Watch the 2-minute course intro, free</a>
             <p className="m-0 text-xs">

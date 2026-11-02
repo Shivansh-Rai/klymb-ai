@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { badges, dayOf, defaultState, openLesson, streak, type CourseState } from "@/lib/course-app";
 import { Icon } from "../icons";
-import { ReferralCard, useReferral } from "../Referral";
+import { headline, useReferral } from "../Referral";
 import { Segmented, Stats, Toggle } from "../ui";
 import type { Act } from "../useCourseApp";
 import { GoogleButton, useCourseUser } from "../user";
@@ -38,9 +38,10 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
   const st = streak(s);
   const initials = user?.name ? user.name.trim().split(/\s+/).map((x) => x[0]).slice(0, 2).join("") : null;
   const groups: [string, ReactNode][] = [
+    ["Referrals", <Row key="refer"><LinkRow label="Refer friends" sub={referral ? headline(referral) : "Get your fee back when 3 friends buy."} onClick={() => act((p) => ({ ...p, screen: "refer", tab: "refer" }))} /></Row>],
     ["Learning", <>
       <Row><Label label="Lesson language" sub="For questions and cheatsheets." /><Segmented value={s.lang} options={[["en", "English"], ["hi", "Hinglish"]]} onChange={(lang) => act((p) => ({ ...p, lang }))} /></Row>
-      <Row><Label label="Daily goal" sub="One lesson step a day keeps your streak." /><Segmented value={s.goal} options={[[5, "5 min"], [15, "15 min"], [30, "30 min"]]} onChange={(goal) => act((p) => ({ ...p, goal }))} /></Row>
+      <Row><Label label="Daily goal" sub="Passing one lesson a day keeps your streak." /><Segmented value={s.goal} options={[[5, "5 min"], [15, "15 min"], [30, "30 min"]]} onChange={(goal) => act((p) => ({ ...p, goal }))} /></Row>
     </>],
     ["This device", <>
       <Row>{user ? <Label label="Signed in" sub={user.email} /> : <div className="flex w-full flex-col gap-2"><Label label="Not signed in" sub="Sign in to keep your progress." /><GoogleButton where="profile" lesson={s.cur} className="h-11 border-2 border-sd-ink sm:max-w-[320px]" /></div>}</Row>
@@ -65,7 +66,6 @@ export function Profile({ s, act }: { s: CourseState; act: Act }) {
         </div>
       </div>
       <Stats className="lg:max-w-[520px]" items={[[st.current, "day streak"], [s.done.length, "lessons done"], [badges(s).filter((b) => b.on).length, "badges"]]} />
-      {referral && <ReferralCard r={referral} className="lg:max-w-[520px]" />}
       <div className="grid grid-cols-1 items-start gap-y-6 lg:grid-cols-2 lg:gap-x-10">
         {groups.map(([label, rows]) => (
           <section key={label} aria-label={label}>

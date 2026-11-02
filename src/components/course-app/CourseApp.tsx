@@ -5,10 +5,11 @@ import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { TAB_SCREENS, fmt, hasQuickCheck, lesson, miniActive, openLesson, streak, togglePlay, type CourseState, type LessonContent, type Tab } from "@/lib/course-app";
-import type { ReferralView } from "@/lib/sd-offer";
+import type { ReferralStanding } from "@/lib/sd-offer";
+import type { SdProgress } from "@/lib/sd-pace";
 import { Icon, type IconName } from "./icons";
 import { Commitment, LeaveQuizDialog, Onboarding, PaywallSheet, QuickCheckSheet, Splash, StreakPop, Toast } from "./Overlays";
-import { ReferralProvider, ReferralSheet } from "./Referral";
+import { ReferralProvider, ReferralSheet, SAMPLE_REFERRAL } from "./Referral";
 import { Course } from "./screens/Course";
 import { Home } from "./screens/Home";
 import { Notifications } from "./screens/Inbox";
@@ -17,17 +18,19 @@ import { Profile } from "./screens/Profile";
 import { Progress } from "./screens/Progress";
 import { QuizIntro, QuizQuestion } from "./screens/Quiz";
 import { Recap } from "./screens/Recap";
+import { Refer } from "./screens/Refer";
 import { Results } from "./screens/Results";
 import { useCourseApp, type Act } from "./useCourseApp";
 import { CourseUserProvider, type CourseUser } from "./user";
 
-const TABS: [Tab, string, IconName][] = [["home", "Home", "home"], ["course", "Course", "layers"], ["progress", "Progress", "chart"], ["profile", "Profile", "user"]];
+const TABS: [Tab, string, IconName][] = [["home", "Home", "home"], ["course", "Course", "layers"], ["progress", "Progress", "chart"], ["refer", "Refer", "gift"], ["profile", "Profile", "user"]];
 
 function Screen({ s, act }: { s: CourseState; act: Act }) {
   switch (s.screen) {
     case "home": return <Home s={s} act={act} />;
     case "course": return <Course s={s} act={act} />;
     case "progress": return <Progress s={s} />;
+    case "refer": return <Refer />;
     case "profile": return <Profile s={s} act={act} />;
     case "player": return <Player s={s} act={act} />;
     case "quiz": return s.quiz.stage === "intro" ? <QuizIntro s={s} act={act} /> : <QuizQuestion key={s.quiz.kind} s={s} act={act} />;
@@ -99,7 +102,7 @@ function Sidebar({ s, act }: { s: CourseState; act: Act }) {
 
 function TabBar({ s, act }: { s: CourseState; act: Act }) {
   return (
-    <nav aria-label="Course" className="grid flex-none grid-cols-4 border-t-2 border-sd-divider bg-sd-bg pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label="Course" className="grid flex-none grid-cols-5 border-t-2 border-sd-divider bg-sd-bg pb-[env(safe-area-inset-bottom)] lg:hidden">
       {TABS.map(([k, label, icon]) => {
         const on = s.tab === k;
         return (
@@ -108,7 +111,7 @@ function TabBar({ s, act }: { s: CourseState; act: Act }) {
             type="button"
             aria-current={on ? "page" : undefined}
             onClick={() => act((p) => ({ ...p, screen: k, tab: k, confirmExit: false }))}
-            className={clsx("flex cursor-pointer flex-col items-start gap-1 px-3 pt-3 pb-1.5 text-xs font-extrabold hover:bg-sd-accent-100", on && "text-sd-accent")}
+            className={clsx("flex min-w-0 cursor-pointer flex-col items-start gap-1 px-2 pt-3 pb-1.5 text-xs sm:px-3 font-extrabold hover:bg-sd-accent-100", on && "text-sd-accent")}
           >
             <Icon name={icon} size={22} /><span>{label}</span>
           </button>
@@ -125,8 +128,8 @@ function TabBar({ s, act }: { s: CourseState; act: Act }) {
  * `lessons` is what this viewer may open, read on the server: paid lessons
  * reach the browser only this way.
  */
-export function CourseApp({ user = null, lessons, enrolled, referral = null, passes = NO_PASSES }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean; referral?: ReferralView | null; passes?: Record<string, number> }) {
-  const { s, act, ready } = useCourseApp({ lessons, enrolled, passes });
+export function CourseApp({ user = null, lessons, enrolled, referral, passes = NO_PASSES, progress = null }: { user?: CourseUser | null; lessons: Record<string, LessonContent>; enrolled: boolean; referral: ReferralStanding; passes?: Record<string, number>; progress?: SdProgress | null }) {
+  const { s, act, ready } = useCourseApp({ lessons, enrolled, passes, progress });
   const scroller = useRef<HTMLDivElement>(null);
 
   // The app is one screen tall and scrolls inside. If the page behind it could scroll too, phone browsers would
@@ -149,10 +152,11 @@ export function CourseApp({ user = null, lessons, enrolled, referral = null, pas
 
   const showTabs = TAB_SCREENS.includes(s.screen);
   const mini = miniActive(s) && !s.ended;
+  const standing = s.referralSample ? SAMPLE_REFERRAL : referral;
 
   return (
     <CourseUserProvider value={user}>
-    <ReferralProvider value={referral}>
+    <ReferralProvider value={standing}>
     <div className="sd-app relative flex h-dvh flex-col overflow-hidden lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
       <Sidebar s={s} act={act} />
       <div
@@ -186,7 +190,7 @@ export function CourseApp({ user = null, lessons, enrolled, referral = null, pas
       {s.qcOpen && s.screen === "player" && hasQuickCheck(s.cur) && <QuickCheckSheet s={s} act={act} />}
       {s.confirmExit && <LeaveQuizDialog s={s} act={act} />}
       {s.paywall && <PaywallSheet s={s} act={act} />}
-      {referral?.state === "open" && !s.referralSeen && showTabs && <ReferralSheet r={referral} act={act} />}
+      {standing.view?.state === "open" && !s.referralSeen && showTabs && <ReferralSheet r={standing.view} act={act} />}
       {s.toast && <Toast text={s.toast} />}
     </div>
     </ReferralProvider>
